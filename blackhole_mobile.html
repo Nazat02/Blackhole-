@@ -1,0 +1,1130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Black Hole — Spacetime Singularity</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --void: #000005;
+    --plasma: #cc1a0a;
+    --corona: #ff4422;
+    --ui-glow: rgba(80,180,255,0.8);
+    --ui-border: rgba(80,180,255,0.22);
+    --ui-bg: rgba(4,10,22,0.72);
+    --ui-text: rgba(150,210,255,0.65);
+    --ui-accent: #7ddeff;
+    --panel-radius: 14px;
+  }
+
+  html, body {
+    width: 100%; height: 100%;
+    background: var(--void);
+    overflow: hidden;
+    font-family: 'Share Tech Mono', monospace;
+    color: #aad4ff;
+  }
+
+  canvas { display: block; }
+
+  /* ── SCANLINES ── */
+  .scanline {
+    position: fixed; inset: 0;
+    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px);
+    pointer-events: none;
+    z-index: 20;
+  }
+
+  /* ── CROSSHAIR ── */
+  #crosshair {
+    position: fixed; top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none; z-index: 5;
+  }
+  #crosshair::before, #crosshair::after {
+    content: ''; position: absolute;
+    background: rgba(80,180,255,0.25);
+  }
+  #crosshair::before { width:1px; height:20px; left:0; top:-10px; }
+  #crosshair::after  { height:1px; width:20px; top:0; left:-10px; }
+
+  /* ── HUD SHELL ── */
+  #hud {
+    position: fixed; inset: 0;
+    pointer-events: none;
+    z-index: 10;
+  }
+
+  /* ── TOP BAR ── */
+  #top-bar {
+    position: absolute; top: 0; left: 0; right: 0;
+    display: flex; align-items: flex-start; justify-content: space-between;
+    padding: clamp(12px, 3vw, 28px) clamp(14px, 4vw, 36px);
+    pointer-events: none;
+  }
+
+  #title-block { pointer-events: none; }
+  #title-block h1 {
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 900;
+    font-size: clamp(1rem, 4vw, 1.55rem);
+    letter-spacing: 0.22em;
+    color: #fff;
+    text-shadow: 0 0 18px var(--ui-glow), 0 0 40px rgba(80,180,255,0.4);
+    text-transform: uppercase;
+  }
+  #title-block .sub {
+    font-size: clamp(0.5rem, 1.8vw, 0.68rem);
+    letter-spacing: 0.25em;
+    color: rgba(150,210,255,0.5);
+    margin-top: 3px;
+  }
+
+  /* ── METRICS PILL (top-right, desktop) ── */
+  #metrics {
+    text-align: right;
+    font-size: clamp(0.55rem, 1.5vw, 0.7rem);
+    letter-spacing: 0.12em;
+    line-height: 2;
+    color: var(--ui-text);
+    background: var(--ui-bg);
+    border: 1px solid var(--ui-border);
+    border-radius: var(--panel-radius);
+    padding: 10px 16px;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    max-width: 260px;
+  }
+  #metrics span { color: var(--ui-accent); }
+
+  /* Hide metrics on small screens — shown inside bottom sheet instead */
+  @media (max-width: 600px) {
+    #metrics { display: none; }
+  }
+
+  /* ── BOTTOM SHEET ── */
+  #bottom-sheet {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    pointer-events: all;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  /* ── SHEET HANDLE / TOGGLE ── */
+  #sheet-toggle {
+    align-self: center;
+    margin-bottom: 6px;
+    background: var(--ui-bg);
+    border: 1px solid var(--ui-border);
+    border-radius: 99px;
+    padding: 6px 20px;
+    color: var(--ui-text);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.6rem;
+    letter-spacing: 0.2em;
+    cursor: pointer;
+    pointer-events: all;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    transition: border-color 0.2s, color 0.2s;
+    display: flex; align-items: center; gap: 8px;
+  }
+  #sheet-toggle:hover { border-color: var(--ui-accent); color: #fff; }
+  #sheet-toggle .chevron { transition: transform 0.3s; display: inline-block; }
+  #sheet-toggle.open .chevron { transform: rotate(180deg); }
+
+  /* ── SHEET BODY ── */
+  #sheet-body {
+    background: var(--ui-bg);
+    border: 1px solid var(--ui-border);
+    border-bottom: none;
+    border-radius: var(--panel-radius) var(--panel-radius) 0 0;
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    padding: 0;
+    overflow: hidden;
+    max-height: 0;
+    transition: max-height 0.4s cubic-bezier(0.4,0,0.2,1), padding 0.3s;
+  }
+  #sheet-body.open {
+    max-height: 420px;
+    padding: 18px 20px 20px;
+  }
+
+  /* ── SHEET INNER LAYOUT ── */
+  .sheet-inner {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px 24px;
+  }
+
+  /* On desktop keep sheet narrower and in the corner */
+  @media (min-width: 601px) {
+    #bottom-sheet {
+      left: auto; right: 36px;
+      width: min(380px, 45vw);
+      bottom: 24px;
+    }
+    #sheet-body {
+      border: 1px solid var(--ui-border);
+      border-radius: var(--panel-radius);
+    }
+    #sheet-body.open { max-height: 500px; padding: 20px 24px 22px; }
+    .sheet-inner { grid-template-columns: 1fr 1fr; gap: 20px 28px; }
+  }
+
+  /* ── SECTION LABELS ── */
+  .sheet-section-label {
+    font-size: 0.55rem;
+    letter-spacing: 0.3em;
+    color: rgba(130,200,255,0.4);
+    text-transform: uppercase;
+    margin-bottom: 10px;
+    grid-column: 1 / -1;
+  }
+
+  /* ── OVERLAYS COLUMN ── */
+  .overlays-col { display: flex; flex-direction: column; gap: 8px; }
+  .overlay-label {
+    font-size: 0.55rem;
+    letter-spacing: 0.25em;
+    color: rgba(130,200,255,0.4);
+    margin-bottom: 2px;
+  }
+
+  /* ── TOGGLE BUTTONS ── */
+  .toggle-btn {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.6rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    padding: 9px 14px;
+    background: transparent;
+    border: 1px solid rgba(80,180,255,0.22);
+    border-radius: 8px;
+    color: rgba(130,200,255,0.55);
+    cursor: pointer;
+    transition: all 0.18s;
+    display: flex; align-items: center; gap: 8px;
+    width: 100%;
+  }
+  .toggle-btn::before {
+    content: '';
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: rgba(80,180,255,0.25);
+    flex-shrink: 0;
+    transition: background 0.18s, box-shadow 0.18s;
+  }
+  .toggle-btn:hover {
+    border-color: rgba(80,180,255,0.5);
+    color: rgba(180,230,255,0.85);
+  }
+  .toggle-btn.active {
+    background: rgba(80,180,255,0.1);
+    border-color: var(--ui-accent);
+    color: #fff;
+  }
+  .toggle-btn.active::before {
+    background: var(--ui-accent);
+    box-shadow: 0 0 8px var(--ui-accent);
+  }
+
+  /* ── SLIDERS COLUMN ── */
+  .sliders-col { display: flex; flex-direction: column; gap: 14px; }
+
+  .ctrl-row {
+    display: flex; flex-direction: column; gap: 5px;
+  }
+  .ctrl-header {
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .ctrl-label {
+    font-size: 0.58rem;
+    letter-spacing: 0.16em;
+    color: rgba(130,200,255,0.5);
+  }
+  .ctrl-val {
+    font-size: 0.58rem;
+    color: var(--ui-accent);
+    min-width: 24px;
+    text-align: right;
+  }
+
+  input[type=range] {
+    -webkit-appearance: none;
+    width: 100%; height: 3px;
+    background: rgba(80,180,255,0.15);
+    border-radius: 3px;
+    outline: none;
+    pointer-events: all;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: var(--ui-accent);
+    box-shadow: 0 0 8px var(--ui-accent);
+    cursor: pointer;
+  }
+  input[type=range]::-moz-range-thumb {
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: var(--ui-accent);
+    box-shadow: 0 0 8px var(--ui-accent);
+    border: none;
+    cursor: pointer;
+  }
+
+  /* ── MOBILE METRICS ROW (inside sheet) ── */
+  #mobile-metrics {
+    grid-column: 1 / -1;
+    display: none;
+    flex-wrap: wrap;
+    gap: 8px 14px;
+    padding-top: 14px;
+    border-top: 1px solid var(--ui-border);
+    margin-top: 4px;
+  }
+  @media (max-width: 600px) {
+    #mobile-metrics { display: flex; }
+  }
+  .metric-chip {
+    font-size: 0.55rem;
+    letter-spacing: 0.12em;
+    color: var(--ui-text);
+    display: flex; gap: 5px;
+  }
+  .metric-chip span { color: var(--ui-accent); }
+
+  /* ── DROP OBJECT BUTTON ── */
+  #drop-obj-wrap {
+    grid-column: 1 / -1;
+    padding-top: 10px;
+  }
+  #btn-drop {
+    width: 100%;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.62rem;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    padding: 11px;
+    background: rgba(200,30,10,0.08);
+    border: 1px solid rgba(200,30,10,0.4);
+    border-radius: 8px;
+    color: #ff6644;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  #btn-drop:hover {
+    background: rgba(200,30,10,0.18);
+    border-color: #ff6644;
+    color: #ff8866;
+    box-shadow: 0 0 16px rgba(200,30,10,0.2);
+  }
+</style>
+</head>
+<body>
+
+<div class="scanline"></div>
+<div id="crosshair"></div>
+
+<canvas id="c"></canvas>
+
+<div id="hud">
+
+  <!-- TOP BAR: title + desktop metrics -->
+  <div id="top-bar">
+    <div id="title-block">
+      <h1>Singularity</h1>
+      <div class="sub">Schwarzschild Black Hole — M = 10⁶ M☉</div>
+    </div>
+    <div id="metrics">
+      <div>SCHWARZ. RADIUS &nbsp;<span id="m-rs">2.95 × 10⁶ km</span></div>
+      <div>PHOTON SPHERE &nbsp;<span id="m-ps">1.5 r<sub>s</sub></span></div>
+      <div>HAWKING TEMP &nbsp;<span id="m-ht">6.17 × 10⁻⁸ K</span></div>
+      <div>TIME DILATION &nbsp;<span id="m-td">∞ at horizon</span></div>
+      <div>FRAME RATE &nbsp;<span id="m-fps">—</span></div>
+    </div>
+  </div>
+
+  <!-- BOTTOM SHEET: controls + overlays -->
+  <div id="bottom-sheet">
+    <button id="sheet-toggle">
+      <span>SIMULATION CONTROLS</span>
+      <span class="chevron">▲</span>
+    </button>
+
+    <div id="sheet-body">
+      <div class="sheet-inner">
+
+        <!-- LEFT: Overlays -->
+        <div class="overlays-col">
+          <div class="overlay-label">OVERLAYS</div>
+          <button class="toggle-btn active" id="btn-grid">GRID</button>
+          <button class="toggle-btn" id="btn-lens">LENSING</button>
+          <button class="toggle-btn" id="btn-jets">JETS</button>
+          <button class="toggle-btn" id="btn-hawking">HAWKING RAD.</button>
+        </div>
+
+        <!-- RIGHT: Sliders -->
+        <div class="sliders-col">
+          <div class="overlay-label">PARAMETERS</div>
+          <div class="ctrl-row">
+            <div class="ctrl-header">
+              <div class="ctrl-label">DISK INTENSITY</div>
+              <div class="ctrl-val" id="vl-disk">70</div>
+            </div>
+            <input type="range" id="sl-disk" min="0" max="100" value="70">
+          </div>
+          <div class="ctrl-row">
+            <div class="ctrl-header">
+              <div class="ctrl-label">CURVATURE GRID</div>
+              <div class="ctrl-val" id="vl-grid">60</div>
+            </div>
+            <input type="range" id="sl-grid" min="0" max="100" value="60">
+          </div>
+          <div class="ctrl-row">
+            <div class="ctrl-header">
+              <div class="ctrl-label">LENSING STRENGTH</div>
+              <div class="ctrl-val" id="vl-lens">55</div>
+            </div>
+            <input type="range" id="sl-lens" min="0" max="100" value="55">
+          </div>
+          <div class="ctrl-row">
+            <div class="ctrl-header">
+              <div class="ctrl-label">ROTATION SPEED</div>
+              <div class="ctrl-val" id="vl-spin">30</div>
+            </div>
+            <input type="range" id="sl-spin" min="0" max="100" value="30">
+          </div>
+        </div>
+
+        <!-- MOBILE METRICS ROW (hidden on desktop) -->
+        <div id="mobile-metrics">
+          <div class="metric-chip">RADIUS <span id="m-rs-m">2.95×10⁶ km</span></div>
+          <div class="metric-chip">PHOTON <span id="m-ps-m">1.5 r_s</span></div>
+          <div class="metric-chip">HAWKING T <span id="m-ht-m">6.17×10⁻⁸ K</span></div>
+          <div class="metric-chip">TIME DIL <span id="m-td-m">∞</span></div>
+          <div class="metric-chip">FPS <span id="m-fps-m">—</span></div>
+        </div>
+
+        <!-- DROP OBJECT -->
+        <div id="drop-obj-wrap">
+          <button id="btn-drop">⬦ DROP OBJECT INTO SINGULARITY</button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+// ─── CONFIG ───────────────────────────────────────────────────────────────────
+const CFG = {
+  diskIntensity: 0.70,
+  gridOpacity: 0.60,
+  lensStrength: 0.55,
+  spinSpeed: 0.30,
+  showGrid: true,
+  showLens: false,
+  showJets: false,
+  showHawking: false,
+};
+
+// ─── SCENE SETUP ──────────────────────────────────────────────────────────────
+const canvas = document.getElementById('c');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.5;
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x000005);
+scene.fog = new THREE.FogExp2(0x000008, 0.008);
+
+const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.01, 2000);
+camera.position.set(0, 14, 38);
+camera.lookAt(0, 0, 0);
+
+// ─── STAR FIELD ───────────────────────────────────────────────────────────────
+function buildStarfield() {
+  const count = 14000;
+  const geo = new THREE.BufferGeometry();
+  const pos = new Float32Array(count * 3);
+  const col = new Float32Array(count * 3);
+  for (let i = 0; i < count; i++) {
+    const r = 300 + Math.random() * 700;
+    const theta = Math.random() * Math.PI * 2;
+    const phi = Math.acos(2 * Math.random() - 1);
+    pos[i*3]   = r * Math.sin(phi) * Math.cos(theta);
+    pos[i*3+1] = r * Math.sin(phi) * Math.sin(theta);
+    pos[i*3+2] = r * Math.cos(phi);
+    const t = Math.random();
+    col[i*3]   = 0.7 + t * 0.3;
+    col[i*3+1] = 0.8 + t * 0.2;
+    col[i*3+2] = 1.0;
+  }
+  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  const mat = new THREE.PointsMaterial({ size: 0.22, vertexColors: true, transparent: true, opacity: 0.85 });
+  return new THREE.Points(geo, mat);
+}
+scene.add(buildStarfield());
+
+// ─── 3D CARTESIAN SPACETIME CURVATURE GRID ───────────────────────────────────
+// True 3D grid: lines along all 3 axes. Each point displaced radially
+// toward the singularity using the Schwarzschild isotropic metric.
+function buildSpacetimeGrid() {
+  const group = new THREE.Group();
+
+  const SIZE  = 44;   // half-extent of the cube
+  const DIVS  = 22;   // grid divisions per axis
+  const RS    = 3.5;  // Schwarzschild radius (scene units)
+  const WARP  = 5.5;  // curvature strength multiplier
+
+  // Schwarzschild isotropic radial warp for a true 3D volumetric grid V(x,y,z).
+  // Every lattice point is displaced radially toward the singularity using the
+  // isotropic form of the Schwarzschild metric:  r_phys = r * (1 + RS/(2r))^2
+  // Inverted here to map flat-space coords → warped display coords.
+  function warpPoint(x, y, z) {
+    const r = Math.sqrt(x*x + y*y + z*z);
+    if (r < 0.001) return new THREE.Vector3(0, 0, 0);
+
+    if (r <= RS) {
+      // Inside / on the horizon: lines converge smoothly to the horizon surface
+      // preserving direction so the funnel reads correctly in 3D.
+      const clampR = RS * 0.18;
+      return new THREE.Vector3(
+        (x / r) * clampR,
+        (y / r) * clampR,
+        (z / r) * clampR
+      );
+    }
+
+    // Isotropic Schwarzschild pull:
+    //   metric factor f = 1 / (1 + RS/(2r))^2   →  r' = r * f
+    // We amplify with WARP so the curvature is visible at scene scale.
+    const iso = 1.0 + (RS * 0.5 * WARP) / r;
+    const rWarped = r / (iso * iso);
+    const factor = rWarped / r;        // always in (0, 1]
+    return new THREE.Vector3(x * factor, y * factor, z * factor);
+  }
+
+  // Build a lookup grid of warped 3D points at (i,j,k)
+  const N = DIVS + 1;
+  const step = (SIZE * 2) / DIVS;
+  const pts = [];   // pts[i][j][k] = THREE.Vector3
+
+  for (let i = 0; i < N; i++) {
+    pts.push([]);
+    for (let j = 0; j < N; j++) {
+      pts[i].push([]);
+      for (let k = 0; k < N; k++) {
+        const x = -SIZE + i * step;
+        const y = -SIZE + j * step;
+        const z = -SIZE + k * step;
+        pts[i][j].push(warpPoint(x, y, z));
+      }
+    }
+  }
+
+  // Color based on proximity to singularity (blue far → cyan/white near)
+  function lineColor(i, j, k) {
+    const x = -SIZE + i * step;
+    const y = -SIZE + j * step;
+    const z = -SIZE + k * step;
+    const r = Math.sqrt(x*x + y*y + z*z);
+    const t = Math.max(0, Math.min(1, 1 - r / (SIZE * 1.2)));
+    // far=dim blue, near=bright cyan
+    return new THREE.Color().setHSL(0.58 - t * 0.1, 0.95, 0.08 + t * 0.55);
+  }
+
+  function addLine(p1, p2, col, opacity) {
+    const geo = new THREE.BufferGeometry().setFromPoints([p1, p2]);
+    const mat = new THREE.LineBasicMaterial({
+      color: col, transparent: true, opacity, depthWrite: false,
+      blending: THREE.AdditiveBlending,
+    });
+    group.add(new THREE.Line(geo, mat));
+  }
+
+  // Subsample: only draw every-other slice for performance but keep density look
+  const SKIP = 2; // draw every Nth line plane
+
+  // ── Lines along X axis (vary i, fix j & k) ──
+  for (let j = 0; j < N; j += SKIP) {
+    for (let k = 0; k < N; k += SKIP) {
+      const segs = [];
+      for (let i = 0; i < N; i++) segs.push(pts[i][j][k]);
+      const col = lineColor(N/2, j, k);
+      const r = Math.sqrt((-SIZE + j*step)**2 + (-SIZE + k*step)**2);
+      const op = 0.06 + Math.max(0, 0.22 * (1 - r/(SIZE*1.5)));
+      for (let s = 0; s < segs.length - 1; s++) addLine(segs[s], segs[s+1], col, op);
+    }
+  }
+
+  // ── Lines along Y axis (vary j, fix i & k) ──
+  for (let i = 0; i < N; i += SKIP) {
+    for (let k = 0; k < N; k += SKIP) {
+      const segs = [];
+      for (let j = 0; j < N; j++) segs.push(pts[i][j][k]);
+      const col = lineColor(i, N/2, k);
+      const r = Math.sqrt((-SIZE + i*step)**2 + (-SIZE + k*step)**2);
+      const op = 0.06 + Math.max(0, 0.22 * (1 - r/(SIZE*1.5)));
+      for (let s = 0; s < segs.length - 1; s++) addLine(segs[s], segs[s+1], col, op);
+    }
+  }
+
+  // ── Lines along Z axis (vary k, fix i & j) ──
+  for (let i = 0; i < N; i += SKIP) {
+    for (let j = 0; j < N; j += SKIP) {
+      const segs = [];
+      for (let k = 0; k < N; k++) segs.push(pts[i][j][k]);
+      const col = lineColor(i, j, N/2);
+      const r = Math.sqrt((-SIZE + i*step)**2 + (-SIZE + j*step)**2);
+      const op = 0.06 + Math.max(0, 0.22 * (1 - r/(SIZE*1.5)));
+      for (let s = 0; s < segs.length - 1; s++) addLine(segs[s], segs[s+1], col, op);
+    }
+  }
+
+  return group;
+}
+const gridGroup = buildSpacetimeGrid();
+scene.add(gridGroup);
+
+// ─── EVENT HORIZON (Black Sphere) ─────────────────────────────────────────────
+const horizonGeo = new THREE.SphereGeometry(3.5, 128, 128);
+const horizonMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
+const horizon = new THREE.Mesh(horizonGeo, horizonMat);
+scene.add(horizon);
+
+// ─── RED CORONA — single glow sphere, bright at horizon edge, fades outward ─
+// Uses BackSide + inverted fresnel so the CENTER of the sphere face is bright
+// and it fades toward the outer edge — giving an outward bloom from the black ball.
+
+const coronaGeo = new THREE.SphereGeometry(9.0, 64, 64);
+const coronaMat = new THREE.ShaderMaterial({
+  uniforms: {
+    time: { value: 0 },
+  },
+  vertexShader: `
+    varying vec3 vNormal;
+    varying vec3 vViewDir;
+    void main() {
+      vNormal = normalize(normalMatrix * normal);
+      vec4 mvPos = modelViewMatrix * vec4(position, 1.0);
+      vViewDir = normalize(-mvPos.xyz);
+      gl_Position = projectionMatrix * mvPos;
+    }
+  `,
+  fragmentShader: `
+    uniform float time;
+    varying vec3 vNormal;
+    varying vec3 vViewDir;
+    void main() {
+      // rimFactor: 1 at grazing edge, 0 at center face
+      float rim = 1.0 - abs(dot(vNormal, vViewDir));
+      rim = clamp(rim, 0.0, 1.0);
+      // We want: bright near the black sphere surface (inner), fade to 0 outside
+      // So invert: center of sphere face (rim~0) = black sphere side = brightest
+      float glow = pow(1.0 - rim, 1.6); // bright at center, fade at edges
+      glow *= 0.90 + 0.10 * sin(time * 1.7);
+      // Color: white-red core → deep crimson → transparent
+      vec3 innerCol = vec3(1.0, 0.55, 0.3);   // hot white-red
+      vec3 outerCol = vec3(0.85, 0.05, 0.0);   // deep crimson
+      vec3 col = mix(outerCol, innerCol, pow(1.0 - rim, 3.0));
+      float alpha = glow * 0.82;
+      gl_FragColor = vec4(col * glow, alpha);
+    }
+  `,
+  transparent: true,
+  depthWrite: false,
+  blending: THREE.AdditiveBlending,
+  side: THREE.BackSide,  // render inside of sphere so we see it from outside
+});
+const coronaMesh = new THREE.Mesh(coronaGeo, coronaMat);
+scene.add(coronaMesh);
+const coronaMeshes = [coronaMesh];
+
+// Keep makeGlowRing for the Schwarzschild ring indicator
+function makeGlowRing(radius, tubeR, color, opacity) {
+  const geo = new THREE.TorusGeometry(radius, tubeR, 32, 200);
+  const mat = new THREE.MeshBasicMaterial({
+    color, transparent: true, opacity, depthWrite: false,
+    blending: THREE.AdditiveBlending,
+  });
+  return new THREE.Mesh(geo, mat);
+}
+
+const glowRing1 = makeGlowRing(4.2, 0.12, 0xcc1100, 0.55);
+glowRing1.rotation.x = Math.PI / 2;
+scene.add(glowRing1);
+const glowRing2 = { material: { opacity: 0.2 } }; // dummy
+const glowRingV1 = { material: { opacity: 0.3 } };
+const glowRingV2 = { material: { opacity: 0.2 } };
+const diagRings = [];
+
+// ─── ACCRETION DISK ───────────────────────────────────────────────────────────
+function buildAccretionDisk() {
+  const group = new THREE.Group();
+  const RINGS = 80;
+  const innerR = 4.0, outerR = 22;
+
+  for (let i = 0; i < RINGS; i++) {
+    const t = i / (RINGS - 1);
+    const r = innerR + t * (outerR - innerR);
+    // Temperature: hotter closer in → bluer/whiter; outer → orange/red
+    const tempT = 1 - t;
+    const color = new THREE.Color().setHSL(
+      0.00 + tempT * 0.02,   // hue: deep red inner → slightly less red outer
+      1.0,
+      0.08 + tempT * 0.62
+    );
+    const opacity = (0.9 - t * 0.85) * 1.0;
+    const tube = 0.018 + (1 - t) * 0.12;
+    const geo = new THREE.TorusGeometry(r, tube, 4, 300);
+    const mat = new THREE.MeshBasicMaterial({
+      color, transparent: true, opacity, depthWrite: false,
+    });
+    const ring = new THREE.Mesh(geo, mat);
+    ring.userData.baseR = r;
+    ring.userData.t = t;
+    group.add(ring);
+  }
+
+  // Disk glow plane (additive quad)
+  const diskGeo = new THREE.RingGeometry(innerR, outerR, 256, 12);
+  const diskMat = new THREE.ShaderMaterial({
+    uniforms: {
+      time: { value: 0 },
+      intensity: { value: 0.7 },
+    },
+    vertexShader: `
+      varying vec2 vUv;
+      varying float vR;
+      void main() {
+        vUv = uv;
+        vR = length(position.xy);
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }
+    `,
+    fragmentShader: `
+      uniform float time;
+      uniform float intensity;
+      varying vec2 vUv;
+      varying float vR;
+      float hash(float n) { return fract(sin(n) * 43758.5453); }
+      void main() {
+        float innerR = 4.0;
+        float outerR = 22.0;
+        float t = (vR - innerR) / (outerR - innerR);
+        t = clamp(t, 0.0, 1.0);
+        
+        // Doppler shift: approaching side bright, receding dark
+        float angle = atan(vUv.y - 0.5, vUv.x - 0.5);
+        float doppler = 0.5 + 0.5 * cos(angle + time * 0.6);
+        
+        // Radial brightness falloff
+        float brightness = (1.0 - t) * (1.0 - t) * doppler * intensity;
+        
+        // Temperature color
+        float hue = 0.07 + (1.0 - t) * 0.12;
+        vec3 hotCol = vec3(1.0, 0.45 + (1.0-t)*0.35, 0.2);  // white-red inner (hottest)
+        vec3 coolCol = vec3(0.6, 0.04, 0.0);                  // deep red outer
+        vec3 col = mix(coolCol, hotCol, 1.0 - t);
+        
+        // Density fluctuations
+        float noise = hash(floor(vR * 8.0 + time * 2.0)) * 0.3 + 0.7;
+        
+        gl_FragColor = vec4(col * brightness * noise, brightness * 0.6);
+      }
+    `,
+    transparent: true,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+    side: THREE.DoubleSide,
+  });
+  const diskMesh = new THREE.Mesh(diskGeo, diskMat);
+  diskMesh.userData.isDiskShader = true;
+  group.add(diskMesh);
+
+  return group;
+}
+const diskGroup = buildAccretionDisk();
+diskGroup.rotation.x = Math.PI / 2;   // lay disk flat in XZ plane; jets fire along ±Y
+scene.add(diskGroup);
+
+// ─── GRAVITATIONAL LENSING RINGS (Einstein rings) ─────────────────────────────
+function buildLensingRings() {
+  const group = new THREE.Group();
+  // Multiple Einstein ring arcs
+  const radii = [6.0, 7.5, 9.2, 11.8];
+  radii.forEach((r, idx) => {
+    const geo = new THREE.TorusGeometry(r, 0.04 - idx*0.006, 16, 256);
+    const mat = new THREE.MeshBasicMaterial({
+      color: new THREE.Color().setHSL(0.55 + idx*0.05, 1, 0.65),
+      transparent: true,
+      opacity: 0.18 - idx*0.03,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+    });
+    const ring = new THREE.Mesh(geo, mat);
+    ring.rotation.x = Math.PI / 2 + (idx * 0.08);
+    group.add(ring);
+  });
+  group.visible = false;
+  return group;
+}
+const lensingGroup = buildLensingRings();
+scene.add(lensingGroup);
+
+// ─── RELATIVISTIC JETS ────────────────────────────────────────────────────────
+function buildJets() {
+  const group = new THREE.Group();
+
+  function makeJet(dir) {
+    const points = [];
+    for (let i = 0; i <= 60; i++) {
+      const t = i / 60;
+      const r = t * t * 6;
+      const y = dir * (4 + t * 55);
+      const theta = t * 8;
+      points.push(new THREE.Vector3(Math.cos(theta)*r*0.3, y, Math.sin(theta)*r*0.3));
+    }
+    const curve = new THREE.CatmullRomCurve3(points);
+    const geo = new THREE.TubeGeometry(curve, 80, 0.18, 8, false);
+    const mat = new THREE.MeshBasicMaterial({
+      color: 0x88ccff,
+      transparent: true,
+      opacity: 0.28,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+    });
+    return new THREE.Mesh(geo, mat);
+  }
+
+  group.add(makeJet(1));
+  group.add(makeJet(-1));
+
+  // Jet particle streams — spawn at horizon poles, burst outward along ±Y
+  const count = 3000;
+  const geo = new THREE.BufferGeometry();
+  const pos = new Float32Array(count * 3);
+  const vel = new Float32Array(count * 3);
+  const RS_JET = 3.5;
+  for (let i = 0; i < count; i++) {
+    const sign = (i % 2 === 0) ? 1 : -1;
+    const frac = Math.random();
+    const spread = frac * frac * 3.5;
+    pos[i*3]   = (Math.random() - 0.5) * spread;
+    pos[i*3+1] = sign * (RS_JET + frac * 52);
+    pos[i*3+2] = (Math.random() - 0.5) * spread;
+    vel[i*3]   = (Math.random() - 0.5) * 0.02;
+    vel[i*3+1] = sign * (0.28 + Math.random() * 0.45);
+    vel[i*3+2] = (Math.random() - 0.5) * 0.02;
+  }
+  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  geo.setAttribute('velocity', new THREE.BufferAttribute(vel, 3));
+
+  // Vertex colors: blue-white at base → pure blue at tip
+  const col = new Float32Array(count * 3);
+  for (let i = 0; i < count; i++) {
+    const frac = Math.abs(pos[i*3+1] - RS_JET) / 52;
+    col[i*3]   = 0.6 + (1 - frac) * 0.4;   // R: white near base, less at tip
+    col[i*3+1] = 0.7 + (1 - frac) * 0.3;   // G: white near base
+    col[i*3+2] = 1.0;                        // B: always full blue
+  }
+  geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+
+  const pmat = new THREE.PointsMaterial({
+    size: 0.18,
+    vertexColors: true,
+    transparent: true,
+    opacity: 0.75,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+  });
+  group.userData.jetParticles = new THREE.Points(geo, pmat);
+  group.add(group.userData.jetParticles);
+
+  group.visible = false;
+  return group;
+}
+const jetsGroup = buildJets();
+scene.add(jetsGroup);
+
+// ─── HAWKING RADIATION PARTICLES ──────────────────────────────────────────────
+function buildHawkingParticles() {
+  const count = 2400;
+  const geo = new THREE.BufferGeometry();
+  const pos = new Float32Array(count * 3);
+  const vel = new Float32Array(count);     // radial speed
+  const phase = new Float32Array(count);
+  const life = new Float32Array(count);
+  const col = new Float32Array(count * 3);
+
+  for (let i = 0; i < count; i++) {
+    const theta = Math.random() * Math.PI * 2;
+    const phi = Math.acos(2 * Math.random() - 1);
+    const r = 3.5 + Math.random() * 0.4;
+    pos[i*3]   = r * Math.sin(phi) * Math.cos(theta);
+    pos[i*3+1] = r * Math.sin(phi) * Math.sin(theta);
+    pos[i*3+2] = r * Math.cos(phi);
+    vel[i] = 0.02 + Math.random() * 0.08;
+    phase[i] = Math.random() * Math.PI * 2;
+    life[i] = Math.random();
+    col[i*3] = 0.6 + Math.random() * 0.4;
+    col[i*3+1] = 0.8 + Math.random() * 0.2;
+    col[i*3+2] = 1.0;
+  }
+  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  geo.setAttribute('velocity', new THREE.BufferAttribute(vel, 1));
+  geo.setAttribute('phase', new THREE.BufferAttribute(phase, 1));
+  geo.setAttribute('life', new THREE.BufferAttribute(life, 1));
+  geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+
+  const mat = new THREE.PointsMaterial({
+    size: 0.06, vertexColors: true, transparent: true, opacity: 0.7,
+    blending: THREE.AdditiveBlending, depthWrite: false,
+  });
+  const pts = new THREE.Points(geo, mat);
+  pts.visible = false;
+  pts.userData = { pos, vel, phase, life, count };
+  return pts;
+}
+const hawkingPts = buildHawkingParticles();
+scene.add(hawkingPts);
+
+// ─── SCHWARZSCHILD RADIUS INDICATOR ───────────────────────────────────────────
+const rsIndicator = makeGlowRing(3.5, 0.06, 0xcc1100, 0.7);
+rsIndicator.rotation.x = Math.PI / 2;
+scene.add(rsIndicator);
+
+// ─── CAMERA ORBIT ─────────────────────────────────────────────────────────────
+let isDragging = false, prevMouse = { x: 0, y: 0 };
+let camTheta = 0.3, camPhi = Math.PI / 4, camR = 38;
+const camTarget = new THREE.Vector3(0, 0, 0);
+
+canvas.addEventListener('mousedown', e => { isDragging = true; prevMouse = { x: e.clientX, y: e.clientY }; });
+canvas.addEventListener('mouseup', () => isDragging = false);
+canvas.addEventListener('mousemove', e => {
+  if (!isDragging) return;
+  const dx = (e.clientX - prevMouse.x) * 0.007;
+  const dy = (e.clientY - prevMouse.y) * 0.007;
+  camTheta += dx;
+  camPhi = Math.max(0.1, Math.min(Math.PI - 0.1, camPhi + dy));
+  prevMouse = { x: e.clientX, y: e.clientY };
+});
+canvas.addEventListener('wheel', e => {
+  camR = Math.max(8, Math.min(120, camR + e.deltaY * 0.04));
+}, { passive: true });
+
+// Touch
+let prevTouch = null;
+canvas.addEventListener('touchstart', e => { prevTouch = { x: e.touches[0].clientX, y: e.touches[0].clientY }; }, { passive: true });
+canvas.addEventListener('touchmove', e => {
+  if (!prevTouch) return;
+  const dx = (e.touches[0].clientX - prevTouch.x) * 0.008;
+  const dy = (e.touches[0].clientY - prevTouch.y) * 0.008;
+  camTheta += dx;
+  camPhi = Math.max(0.1, Math.min(Math.PI - 0.1, camPhi + dy));
+  prevTouch = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+}, { passive: true });
+
+// ─── UI CONTROLS ─────────────────────────────────────────────────────────────
+function bindSlider(id, valId, key, scale=0.01) {
+  const el = document.getElementById(id);
+  const vl = document.getElementById(valId);
+  el.addEventListener('input', () => {
+    CFG[key] = parseFloat(el.value) * scale;
+    vl.textContent = el.value;
+  });
+}
+bindSlider('sl-disk', 'vl-disk', 'diskIntensity');
+bindSlider('sl-grid', 'vl-grid', 'gridOpacity');
+bindSlider('sl-lens', 'vl-lens', 'lensStrength');
+bindSlider('sl-spin', 'vl-spin', 'spinSpeed');
+
+function bindToggle(btnId, key, target) {
+  const btn = document.getElementById(btnId);
+  btn.addEventListener('click', () => {
+    CFG[key] = !CFG[key];
+    target.visible = CFG[key];
+    btn.classList.toggle('active', CFG[key]);
+  });
+}
+bindToggle('btn-grid', 'showGrid', gridGroup);
+bindToggle('btn-lens', 'showLens', lensingGroup);
+bindToggle('btn-jets', 'showJets', jetsGroup);
+bindToggle('btn-hawking', 'showHawking', hawkingPts);
+document.getElementById('btn-grid').classList.add('active');
+
+// ─── SHEET TOGGLE ────────────────────────────────────────────────────────────
+const sheetToggle = document.getElementById('sheet-toggle');
+const sheetBody   = document.getElementById('sheet-body');
+sheetToggle.addEventListener('click', () => {
+  const open = sheetBody.classList.toggle('open');
+  sheetToggle.classList.toggle('open', open);
+});
+
+// ─── DROP OBJECT ─────────────────────────────────────────────────────────────
+document.getElementById('btn-drop').addEventListener('click', () => {
+  const geo = new THREE.SphereGeometry(0.15, 8, 8);
+  const mat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true });
+  const obj = new THREE.Mesh(geo, mat);
+  let angle = Math.random() * Math.PI * 2;
+  let radius = 20;
+  scene.add(obj);
+  const startTime = performance.now();
+  function spiralIn() {
+    const t2 = Math.min(1, (performance.now() - startTime) / 4000);
+    radius = 20 * (1 - t2 * 0.98);
+    angle += 0.1 + t2 * 0.1;
+    obj.position.set(Math.cos(angle) * radius, 0.3 * (1 - t2), Math.sin(angle) * radius);
+    mat.opacity = 1 - t2;
+    if (t2 < 1) requestAnimationFrame(spiralIn);
+    else scene.remove(obj);
+  }
+  spiralIn();
+});
+
+// ─── ANIMATION ────────────────────────────────────────────────────────────────
+let t = 0, frameCount = 0, lastFPS = performance.now();
+const fpsDom = document.getElementById('m-fps');
+const fpsDomM = document.getElementById('m-fps-m');
+
+function animate() {
+  requestAnimationFrame(animate);
+  t += 0.016;
+  frameCount++;
+
+  // FPS
+  if (performance.now() - lastFPS > 800) {
+    const fps = (frameCount / ((performance.now()-lastFPS)/1000)).toFixed(0) + ' fps';
+    fpsDom.textContent = fps;
+    if (fpsDomM) fpsDomM.textContent = fps;
+    frameCount = 0; lastFPS = performance.now();
+  }
+
+  // Camera orbit
+  camera.position.x = camR * Math.sin(camPhi) * Math.cos(camTheta);
+  camera.position.y = camR * Math.cos(camPhi);
+  camera.position.z = camR * Math.sin(camPhi) * Math.sin(camTheta);
+  camera.lookAt(0, -2, 0);
+
+  // Spin accretion disk rings
+  const spinSpeed = CFG.spinSpeed * 0.012;
+  diskGroup.children.forEach((child, i) => {
+    if (child.userData.isDiskShader) {
+      child.material.uniforms.time.value = t;
+      child.material.uniforms.intensity.value = CFG.diskIntensity;
+    } else {
+      const r = child.userData.baseR || 1;
+      // Keplerian: angular velocity ∝ r^(-3/2)
+      child.rotation.z += spinSpeed * Math.pow(r, -1.4) * 0.7;
+    }
+  });
+
+  // Grid opacity
+  gridGroup.children.forEach(l => {
+    l.material.opacity = CFG.gridOpacity * 0.22;
+  });
+
+  // Red corona — update shader time for pulse
+  coronaMesh.material.uniforms.time.value = t;
+  // Equatorial accent ring
+  glowRing1.material.opacity = 0.45 + 0.10 * Math.sin(t * 2.1);
+
+  // Lensing rings spin
+  if (lensingGroup.visible) {
+    lensingGroup.children.forEach((r, i) => {
+      r.rotation.z += 0.003 * (i % 2 === 0 ? 1 : -1);
+      r.material.opacity = (0.18 - i*0.03) * CFG.lensStrength;
+    });
+  }
+
+  // Hawking particles
+  if (hawkingPts.visible) {
+    const { pos, vel, life, count } = hawkingPts.userData;
+    for (let i = 0; i < count; i++) {
+      life[i] += 0.008;
+      if (life[i] > 1) {
+        // Respawn on horizon surface
+        const theta = Math.random() * Math.PI * 2;
+        const phi = Math.acos(2*Math.random()-1);
+        const r = 3.5 + Math.random()*0.2;
+        pos[i*3]   = r * Math.sin(phi)*Math.cos(theta);
+        pos[i*3+1] = r * Math.sin(phi)*Math.sin(theta);
+        pos[i*3+2] = r * Math.cos(phi);
+        life[i] = 0;
+        vel[i] = 0.02 + Math.random()*0.08;
+      } else {
+        const nx = pos[i*3], ny = pos[i*3+1], nz = pos[i*3+2];
+        const rr = Math.sqrt(nx*nx + ny*ny + nz*nz);
+        pos[i*3]   += (nx/rr) * vel[i];
+        pos[i*3+1] += (ny/rr) * vel[i];
+        pos[i*3+2] += (nz/rr) * vel[i];
+      }
+    }
+    hawkingPts.geometry.attributes.position.needsUpdate = true;
+    hawkingPts.geometry.attributes.life.needsUpdate = true;
+  }
+
+  // Jet particles — advance all 3 velocity components, respawn at horizon poles
+  if (jetsGroup.visible) {
+    const jetPts = jetsGroup.userData.jetParticles;
+    const pa = jetPts.geometry.attributes.position.array;
+    const va = jetPts.geometry.attributes.velocity.array;
+    const ca = jetPts.geometry.attributes.color.array;
+    const RS_JET = 3.5;
+    for (let i = 0; i < 3000; i++) {
+      pa[i*3]   += va[i*3];
+      pa[i*3+1] += va[i*3+1];
+      pa[i*3+2] += va[i*3+2];
+      if (Math.abs(pa[i*3+1]) > 58) {
+        const sign = va[i*3+1] > 0 ? 1 : -1;
+        pa[i*3]   = (Math.random() - 0.5) * 0.4;
+        pa[i*3+1] = sign * (RS_JET + Math.random() * 1.5);
+        pa[i*3+2] = (Math.random() - 0.5) * 0.4;
+        va[i*3]   = (Math.random() - 0.5) * 0.02;
+        va[i*3+1] = sign * (0.28 + Math.random() * 0.45);
+        va[i*3+2] = (Math.random() - 0.5) * 0.02;
+        // Blue-white at base on respawn
+        ca[i*3] = 0.9; ca[i*3+1] = 0.95; ca[i*3+2] = 1.0;
+      } else {
+        // Fade toward pure blue as particle travels outward
+        const frac = Math.min(1, (Math.abs(pa[i*3+1]) - RS_JET) / 52);
+        ca[i*3]   = Math.max(0.3, 0.9 - frac * 0.6);
+        ca[i*3+1] = Math.max(0.4, 0.95 - frac * 0.55);
+      }
+    }
+    jetPts.geometry.attributes.position.needsUpdate = true;
+    jetPts.geometry.attributes.color.needsUpdate = true;
+  }
+
+  // Horizon shimmer
+  horizon.material.color.setHSL(0, 0, 0.002 * Math.sin(t * 5));
+
+  renderer.render(scene, camera);
+}
+animate();
+
+// ─── RESIZE ───────────────────────────────────────────────────────────────────
+window.addEventListener('resize', () => {
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+});
+</script>
+</body>
+</html>
