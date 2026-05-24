@@ -2,7 +2,7 @@
 
 **A visually stunning, real-time 3D simulation of a Schwarzschild black hole with relativistic effects.**
 
-![Black Hole Simulator Preview](blackhole.png)
+![Black Hole Simulator Preview](images/blackhole.png)
 
 ## ✨ Live Demo
 
