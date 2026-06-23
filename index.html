@@ -1077,6 +1077,13 @@ input[type=range]::-moz-range-thumb {
             </div>
             <div class="toggle-pill"></div>
           </div>
+          <div class="overlay-row" id="btn-funnel">
+            <div class="overlay-row-left">
+              <span class="overlay-icon">▽</span>
+              <div class="overlay-name">Embedding Funnel</div>
+            </div>
+            <div class="toggle-pill"></div>
+          </div>
         </div>
       </div>
     </div>
@@ -1210,7 +1217,7 @@ input[type=range]::-moz-range-thumb {
 const CFG = {
   diskIntensity: 0.70, gridOpacity: 0.60,
   lensStrength: 0.55,  spinSpeed: 0.30,
-  showGrid: true, showLens: false, showJets: false, showHawking: false,
+  showGrid: true, showLens: false, showJets: false, showHawking: false, showFunnel: false,
 };
 
 // ─── SCENE ───────────────────────────────────────────────────────────────────
@@ -1318,6 +1325,110 @@ function buildSpacetimeGrid() {
 }
 const gridGroup = buildSpacetimeGrid();
 scene.add(gridGroup);
+
+// ─── 2D EMBEDDING DIAGRAM: Flamm's paraboloid (the textbook "funnel") ─────────
+// This is the classic rubber-sheet visualization of spacetime curvature, derived
+// directly from the Schwarzschild metric's spatial embedding into flat 3D space:
+//   z(r) = 2 * sqrt( rs * (r - rs) )     for r >= rs
+// where rs is the Schwarzschild radius. It is purely a function of r — no noise,
+// no artistic shaping, just that equation evaluated across a flat polar grid and
+// pushed downward (the conventional plotting direction for the "funnel" picture).
+function buildSpacetimeFunnel() {
+  const group = new THREE.Group();
+  const RS = 3.5;            // same Schwarzschild radius used by the rest of the sim
+  const R_OUT = 26;          // outer radius of the sheet
+  const RADIAL_DIVS = 64;
+  const ANGULAR_DIVS = 96;
+  // Real Flamm's paraboloid depth grows unbounded with R_OUT; a raw plot would
+  // dive far below the camera's normal framing and bury itself under the disk.
+  // DEPTH_SCALE rescales the equation's output for legible on-screen depth while
+  // preserving its exact shape (every point is still proportional to the true
+  // z(r) = 2*sqrt(rs*(r-rs)) curve — this is a uniform display scale, not a
+  // distortion of the curvature itself).
+  const DEPTH_SCALE = 0.55;
+
+  function depthAt(r) {
+    const rc = Math.max(r, RS); // clamp: the embedding is undefined inside rs
+    return 2 * Math.sqrt(RS * (rc - RS)) * DEPTH_SCALE;
+  }
+
+  // Build vertex grid in (radius, angle) space, mapped to x/z space, with the
+  // throat (smallest r) as the DEEPEST point and the surface flattening toward
+  // y=0 as r grows large — the correct physical shape of Flamm's paraboloid.
+  // (Previous version used y = -depthAt(r) directly: since depthAt(r) grows
+  // WITH r, that put the throat at y=0 and sent the outer rim furthest down —
+  // i.e. narrow at the top, flaring open at the bottom, the literal opposite
+  // of the intended funnel.)
+  const maxDepth = depthAt(R_OUT);
+  const verts = [];
+  for (let i = 0; i <= RADIAL_DIVS; i++) {
+    const r = RS + (R_OUT - RS) * (i / RADIAL_DIVS) ** 1.6; // denser sampling near the throat
+    const y = depthAt(r) - maxDepth; // throat (r=RS) → -maxDepth (deepest); far rim → 0 (flat)
+    const row = [];
+    for (let j = 0; j <= ANGULAR_DIVS; j++) {
+      const theta = (j / ANGULAR_DIVS) * Math.PI * 2;
+      row.push(new THREE.Vector3(r * Math.cos(theta), y, r * Math.sin(theta)));
+    }
+    verts.push(row);
+  }
+
+  // Wireframe mesh: radial lines (constant theta) + ring lines (constant r).
+  // Styled to match the reference look — fine, dense cyan grid lines with an
+  // additive glow, brightest near the throat and fading out toward the far field,
+  // no solid fill (a pure line-grid embedding diagram rather than a shaded sheet).
+  function colorAt(r) {
+    const t = Math.max(0, Math.min(1, 1 - (r - RS) / (R_OUT - RS)));
+    return new THREE.Color().setHSL(0.50 + t * 0.04, 0.75, 0.32 + t * 0.38);
+  }
+
+  // Ring lines (constant radius) — denser near the throat for the fine mesh look.
+  for (let i = 0; i <= RADIAL_DIVS; i++) {
+    const r = RS + (R_OUT - RS) * (i / RADIAL_DIVS) ** 1.6;
+    const pts = verts[i].slice();
+    pts.push(pts[0]);
+    const geo = new THREE.BufferGeometry().setFromPoints(pts);
+    const t = Math.max(0, Math.min(1, 1 - (r - RS) / (R_OUT - RS)));
+    const op = 0.10 + 0.5 * t;
+    const mat = new THREE.LineBasicMaterial({
+      color: colorAt(r), transparent: true, opacity: op,
+      depthWrite: false, blending: THREE.AdditiveBlending,
+    });
+    group.add(new THREE.Line(geo, mat));
+  }
+  // Radial lines (constant theta) — many thin spokes, like the reference grid.
+  const RADIAL_LINE_COUNT = 48;
+  for (let j = 0; j < RADIAL_LINE_COUNT; j++) {
+    const jj = Math.round((j / RADIAL_LINE_COUNT) * ANGULAR_DIVS);
+    const pts = verts.map(row => row[jj]);
+    const geo = new THREE.BufferGeometry().setFromPoints(pts);
+    const mat = new THREE.LineBasicMaterial({
+      color: colorAt(RS * 1.5), transparent: true, opacity: 0.22,
+      depthWrite: false, blending: THREE.AdditiveBlending,
+    });
+    group.add(new THREE.Line(geo, mat));
+  }
+
+  // A thin bright rim right at the throat (r = rs) makes the horizon's location
+  // on the sheet unambiguous, since the equation itself goes vertical there.
+  const rimPts = verts[0].slice(); rimPts.push(rimPts[0]);
+  const rimGeo = new THREE.BufferGeometry().setFromPoints(rimPts);
+  const rimMat = new THREE.LineBasicMaterial({
+    color: 0x9b78ff, transparent: true, opacity: 0.8,
+    depthWrite: false, blending: THREE.AdditiveBlending,
+  });
+  group.add(new THREE.Line(rimGeo, rimMat));
+
+  // The diagram is a standalone side-view visualization, not part of the same
+  // 3D world as the disk/horizon — without this offset its throat clips straight
+  // through the accretion disk and event-horizon sphere, which is what made it
+  // look broken (the only visible bit was buried behind/inside other objects).
+  group.position.y = 6;
+
+  group.visible = false;
+  return group;
+}
+const funnelGroup = buildSpacetimeFunnel();
+scene.add(funnelGroup);
 
 // ─── EVENT HORIZON ───────────────────────────────────────────────────────────
 const horizonGeo = new THREE.SphereGeometry(3.5, 128, 128);
@@ -1637,6 +1748,7 @@ function updatePhotonSphereScale(ratio) {
 // ─── CAMERA ORBIT ────────────────────────────────────────────────────────────
 let isDragging=false, prevMouse={x:0,y:0};
 let camTheta=0.3, camPhi=1.22, camR=38; // camPhi closer to equatorial plane (~70° from vertical) for edge-on embedded look
+let funnelLookY = -2; // camera look-target y; shifts when the embedding funnel diagram is shown
 canvas.addEventListener('mousedown', e=>{isDragging=true; prevMouse={x:e.clientX,y:e.clientY};});
 canvas.addEventListener('mouseup', ()=>isDragging=false);
 canvas.addEventListener('mousemove', e=>{
@@ -1828,6 +1940,46 @@ document.getElementById('btn-cam-orbit').addEventListener('click', (e) => {
   e.currentTarget.classList.toggle('active', autoOrbitActive);
 });
 
+// The embedding funnel is a standalone side-view diagram, not a layer that
+// composites with the 3D black hole scene — showing both at once is what made
+// it look "broken" (the disk and horizon sphere visually buried it). Toggling
+// it now swaps the main scene out and frames the camera on the diagram instead.
+const btnFunnelRow = document.getElementById('btn-funnel');
+let preFunnelCamR = camR, preFunnelPhi = camPhi, preFunnelTheta = camTheta;
+btnFunnelRow.addEventListener('click', () => {
+  CFG.showFunnel = !CFG.showFunnel;
+  btnFunnelRow.classList.toggle('active', CFG.showFunnel);
+  funnelGroup.visible = CFG.showFunnel;
+
+  horizon.visible = !CFG.showFunnel;
+  coronaMesh.visible = !CFG.showFunnel;
+  glowRing1.visible = !CFG.showFunnel;
+  diskGroup.visible = !CFG.showFunnel;
+  gridGroup.visible = !CFG.showFunnel && CFG.showGrid;
+  lensingGroup.visible = !CFG.showFunnel && CFG.showLens;
+  jetsGroup.visible = !CFG.showFunnel && CFG.showJets;
+  hawkingPts.visible = !CFG.showFunnel && CFG.showHawking;
+
+  if (CFG.showFunnel) {
+    preFunnelCamR = camR; preFunnelPhi = camPhi; preFunnelTheta = camTheta;
+    autoOrbitActive = false;
+    document.getElementById('btn-cam-orbit').classList.remove('active');
+    // A grazing, near-equatorial view shows the true side-on silhouette of the
+    // bowl — throat far/up, rim near/down — which is the correct, unambiguous
+    // read. (A steep overhead angle was tried and made it look inverted instead:
+    // looking straight down the throat, perspective makes the far rim of the
+    // opening appear to flare outward as it descends, the opposite of the
+    // intended look.)
+    camR = 42;
+    funnelLookY = 0;
+    tweenCameraTo(1.3, camTheta);
+  } else {
+    camR = preFunnelCamR;
+    funnelLookY = -2;
+    tweenCameraTo(preFunnelPhi, preFunnelTheta);
+  }
+});
+
 // ─── UI: DROP OBJECT ─────────────────────────────────────────────────────────
 document.getElementById('btn-drop').addEventListener('click', () => {
   const RS_SCENE = 3.5;
@@ -1866,14 +2018,36 @@ document.getElementById('btn-drop').addEventListener('click', () => {
   let angle = Math.random()*Math.PI*2, radius = 20;
   const startTime = performance.now();
 
+  // Funnel-frame helpers (mirrors buildSpacetimeFunnel constants)
+  const FUNNEL_RS = 3.5, FUNNEL_R_OUT = 26, FUNNEL_DEPTH_SCALE = 0.55, FUNNEL_Y_OFFSET = 6;
+  function funnelDepthAt(r) {
+    const rc = Math.max(r, FUNNEL_RS);
+    return 2 * Math.sqrt(FUNNEL_RS * (rc - FUNNEL_RS)) * FUNNEL_DEPTH_SCALE;
+  }
+  const funnelMaxDepth = funnelDepthAt(FUNNEL_R_OUT);
+  function getFunnelPos(r, a) {
+    // map r to funnel surface: throat is deepest, rim is at y=FUNNEL_Y_OFFSET
+    const y = FUNNEL_Y_OFFSET + (funnelDepthAt(r) - funnelMaxDepth);
+    return new THREE.Vector3(Math.cos(a) * r, y, Math.sin(a) * r);
+  }
+
   function spiralIn() {
     const t2 = Math.min(1, (performance.now()-startTime)/4000);
     radius = 20*(1-t2*0.98); angle += 0.1+t2*0.1;
-    const pos = new THREE.Vector3(Math.cos(angle)*radius, 0.3*(1-t2), Math.sin(angle)*radius);
+    let pos, activeRadius;
+    if (CFG.showFunnel) {
+      // In funnel mode: drop radially inward along the paraboloid surface.
+      // Keep angle fixed (straight spoke) so the path is clearly visible on the diagram.
+      activeRadius = FUNNEL_RS + (FUNNEL_R_OUT - FUNNEL_RS) * (1 - t2);
+      pos = getFunnelPos(activeRadius, angle);
+    } else {
+      activeRadius = radius;
+      pos = new THREE.Vector3(Math.cos(angle)*radius, 0.3*(1-t2), Math.sin(angle)*radius);
+    }
     tip.position.copy(pos);
 
     // Tidal force ~ 1/r^3: grows sharply as radius approaches r_s.
-    const proximity = Math.max(0, 1 - (radius - RS_SCENE) / (20 - RS_SCENE)); // 0 far away, 1 at horizon
+    const proximity = Math.max(0, 1 - (activeRadius - RS_SCENE) / (20 - RS_SCENE)); // 0 far away, 1 at horizon
     const stretchLen = 0.6 + Math.pow(proximity, 4) * 9; // how far back along the path the strand reaches
     const tidalSquish = Math.max(0.035, 0.16 / Math.sqrt(1 + stretchLen)); // thinner as it stretches
 
@@ -1905,7 +2079,7 @@ document.getElementById('btn-drop').addEventListener('click', () => {
     tip.material.color.setRGB(1.0, 0.95 - heat*0.5, 0.85 - heat*0.8);
 
     // Fade only at the very end (after crossing the horizon), not throughout the fall.
-    const fadeOut = radius < RS_SCENE * 1.05 ? Math.max(0, (radius - RS_SCENE*0.3) / (RS_SCENE*0.75)) : 1;
+    const fadeOut = activeRadius < RS_SCENE * 1.05 ? Math.max(0, (activeRadius - RS_SCENE*0.3) / (RS_SCENE*0.75)) : 1;
     strandMat.opacity = fadeOut;
     tip.material.opacity = fadeOut;
 
@@ -1993,13 +2167,32 @@ document.getElementById('btn-drop').addEventListener('click', () => {
     const startTime = performance.now();
     const DURATION = 4200;
 
+    // Funnel-frame helpers (mirrors buildSpacetimeFunnel constants)
+    const FILE_FUNNEL_RS = 3.5, FILE_FUNNEL_R_OUT = 26, FILE_FUNNEL_DEPTH_SCALE = 0.55, FILE_FUNNEL_Y_OFFSET = 6;
+    function fileFunnelDepthAt(r) {
+      const rc = Math.max(r, FILE_FUNNEL_RS);
+      return 2 * Math.sqrt(FILE_FUNNEL_RS * (rc - FILE_FUNNEL_RS)) * FILE_FUNNEL_DEPTH_SCALE;
+    }
+    const fileFunnelMaxDepth = fileFunnelDepthAt(FILE_FUNNEL_R_OUT);
+    function getFileFunnelPos(r, a) {
+      const y = FILE_FUNNEL_Y_OFFSET + (fileFunnelDepthAt(r) - fileFunnelMaxDepth);
+      return new THREE.Vector3(Math.cos(a) * r, y, Math.sin(a) * r);
+    }
+
     function spiralInFile() {
       const t2 = Math.min(1, (performance.now()-startTime)/DURATION);
       radius = 20*(1-t2*0.98); angle += 0.1+t2*0.1;
-      const pos = new THREE.Vector3(Math.cos(angle)*radius, 0.3*(1-t2), Math.sin(angle)*radius);
+      let pos, activeRadius;
+      if (CFG.showFunnel) {
+        activeRadius = FILE_FUNNEL_RS + (FILE_FUNNEL_R_OUT - FILE_FUNNEL_RS) * (1 - t2);
+        pos = getFileFunnelPos(activeRadius, angle);
+      } else {
+        activeRadius = radius;
+        pos = new THREE.Vector3(Math.cos(angle)*radius, 0.3*(1-t2), Math.sin(angle)*radius);
+      }
       tip.position.copy(pos);
 
-      const proximity = Math.max(0, 1 - (radius - RS_SCENE) / (20 - RS_SCENE));
+      const proximity = Math.max(0, 1 - (activeRadius - RS_SCENE) / (20 - RS_SCENE));
       const stretchLen = 0.6 + Math.pow(proximity, 4) * 9;
       const tidalSquish = Math.max(0.035, 0.16 / Math.sqrt(1 + stretchLen));
 
@@ -2027,7 +2220,7 @@ document.getElementById('btn-drop').addEventListener('click', () => {
       strandMat.color.setRGB(1.0 - heat*0.4, 1.0, 0.85 + heat*0.15);
       tip.material.color.setRGB(0.75+heat*0.25, 1.0, 0.92);
 
-      const fadeOut = radius < RS_SCENE*1.05 ? Math.max(0, (radius - RS_SCENE*0.3)/(RS_SCENE*0.75)) : 1;
+      const fadeOut = activeRadius < RS_SCENE*1.05 ? Math.max(0, (activeRadius - RS_SCENE*0.3)/(RS_SCENE*0.75)) : 1;
       strandMat.opacity = fadeOut;
       tip.material.opacity = fadeOut;
 
@@ -2223,6 +2416,18 @@ document.getElementById('btn-tde').addEventListener('click', () => {
   const startTime = performance.now();
   const DURATION = 7000;
 
+  // Funnel-frame helpers for TDE (mirrors buildSpacetimeFunnel constants)
+  const TDE_FUNNEL_RS = 3.5, TDE_FUNNEL_R_OUT = 26, TDE_FUNNEL_DEPTH_SCALE = 0.55, TDE_FUNNEL_Y_OFFSET = 6;
+  function tdeFunnelDepthAt(r) {
+    const rc = Math.max(r, TDE_FUNNEL_RS);
+    return 2 * Math.sqrt(TDE_FUNNEL_RS * (rc - TDE_FUNNEL_RS)) * TDE_FUNNEL_DEPTH_SCALE;
+  }
+  const tdeFunnelMaxDepth = tdeFunnelDepthAt(TDE_FUNNEL_R_OUT);
+  function getTdeFunnelPos(r, a) {
+    const y = TDE_FUNNEL_Y_OFFSET + (tdeFunnelDepthAt(r) - tdeFunnelMaxDepth);
+    return new THREE.Vector3(Math.cos(a) * r, y, Math.sin(a) * r);
+  }
+
   function animateTDE() {
     const elapsed = performance.now() - startTime;
     const p = Math.min(1, elapsed / DURATION);
@@ -2231,7 +2436,15 @@ document.getElementById('btn-tde').addEventListener('click', () => {
     // slower start, accelerating in — gives the star a real curved trajectory to spaghettify along.
     radius = 34 * (1 - Math.pow(p, 1.7) * 0.97) + RS_SCENE * 0.5;
     angle += 0.035 + p * 0.05;
-    const pos = new THREE.Vector3(Math.cos(angle) * radius, 0.4 * (1 - p) * Math.sin(p * 3.0), Math.sin(angle) * radius);
+    let pos, activeRadius;
+    if (CFG.showFunnel) {
+      // In funnel mode: slide the star radially inward along the paraboloid surface.
+      activeRadius = TDE_FUNNEL_RS + (TDE_FUNNEL_R_OUT - TDE_FUNNEL_RS) * Math.max(0, 1 - Math.pow(p, 1.7) * 0.97);
+      pos = getTdeFunnelPos(activeRadius, angle);
+    } else {
+      activeRadius = radius;
+      pos = new THREE.Vector3(Math.cos(angle) * radius, 0.4 * (1 - p) * Math.sin(p * 3.0), Math.sin(angle) * radius);
+    }
 
     star.position.copy(pos);
     glowSprite.position.copy(pos);
@@ -2249,8 +2462,8 @@ document.getElementById('btn-tde').addEventListener('click', () => {
     if (pathHistory.length > HISTORY_LEN) pathHistory.shift();
 
     // Tidal proximity: 0 far away, 1 once deep past the tidal radius.
-    const proximity = Math.max(0, Math.min(1, 1 - (radius - RS_SCENE) / (R_TIDAL - RS_SCENE)));
-    const disrupted = radius <= R_TIDAL;
+    const proximity = Math.max(0, Math.min(1, 1 - (activeRadius - RS_SCENE) / (R_TIDAL - RS_SCENE)));
+    const disrupted = activeRadius <= R_TIDAL;
 
     if (disrupted) {
       // The star itself shrinks as it converts into stream material — its remaining
@@ -2331,7 +2544,7 @@ function animate() {
   camera.position.x = camR*Math.sin(camPhi)*Math.cos(camTheta);
   camera.position.y = camR*Math.cos(camPhi);
   camera.position.z = camR*Math.sin(camPhi)*Math.sin(camTheta);
-  camera.lookAt(0,-2,0);
+  camera.lookAt(0,funnelLookY,0);
   const spinSpeed = CFG.spinSpeed*0.012;
   diskGroup.children.forEach(child => {
     if(child.userData.isDiskShader) {
