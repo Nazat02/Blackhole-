@@ -126,6 +126,30 @@ canvas {
   color: var(--text-secondary);
   margin-top: 5px;
 }
+#back-link {
+  pointer-events: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 12px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.58rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  text-decoration: none;
+  border: 1px solid var(--border-subtle);
+  background: var(--surface-2);
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  transition: color 0.2s, border-color 0.2s, background 0.2s;
+}
+#back-link:hover {
+  color: var(--text-primary);
+  border-color: var(--border-glow);
+  background: var(--surface-hover);
+}
+#back-link svg { width: 11px; height: 11px; flex-shrink: 0; }
 
 /* ── SIDE DOCK TOGGLE (tab) ── */
 #dock-tab {
@@ -966,6 +990,10 @@ input[type=range]::-moz-range-thumb {
       <div class="eyebrow">Astrophysics Lab / Sector 7</div>
       <h1>Singularity</h1>
       <div class="sub">Schwarzschild Black Hole — M = 10⁶ M☉</div>
+      <a href="landing.html" id="back-link">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        Back
+      </a>
     </div>
   </div>
 </div>
