@@ -1,0 +1,2673 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Black Hole — Spacetime Singularity</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --void: #04040f;
+  --surface-0: #06061a;
+  --surface-1: rgba(9,7,26,0.88);
+  --surface-2: rgba(14,10,38,0.72);
+  --surface-3: rgba(20,15,52,0.55);
+  --surface-hover: rgba(26,18,64,0.80);
+  --border-subtle: rgba(110,80,240,0.13);
+  --border-mid: rgba(130,95,255,0.22);
+  --border-glow: rgba(140,100,255,0.42);
+  --accent-violet: #9b78ff;
+  --accent-violet-dim: rgba(155,120,255,0.18);
+  --accent-teal: #00ddb8;
+  --accent-teal-dim: rgba(0,221,184,0.15);
+  --accent-hot: #ff6535;
+  --accent-hot-dim: rgba(255,101,53,0.14);
+  --accent-amber: #ffb347;
+  --text-primary: rgba(228,222,255,0.94);
+  --text-secondary: rgba(148,132,200,0.60);
+  --text-tertiary: rgba(110,95,165,0.45);
+  --text-value: #00ddb8;
+  --text-value-warm: #ffb347;
+  --panel-w: 300px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --panel-pad: 14px;
+}
+
+html, body {
+  width: 100%; height: 100%;
+  background: var(--void);
+  overflow: hidden;
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--text-primary);
+  /* prevent iOS bounce */
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+}
+
+canvas {
+  display: block;
+  position: fixed;
+  top: 0; left: 0;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* ── SCANLINES ── */
+.scanline {
+  position: fixed; inset: 0;
+  background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.018) 2px, rgba(0,0,0,0.018) 4px);
+  pointer-events: none; z-index: 20;
+}
+
+/* ── CROSSHAIR ── */
+#crosshair {
+  position: fixed; top: 50%; left: 50%;
+  transform: translate(-50%,-50%);
+  pointer-events: none; z-index: 5;
+}
+#crosshair::before, #crosshair::after {
+  content: ''; position: absolute;
+  background: rgba(160,124,255,0.18);
+}
+#crosshair::before { width: 1px; height: 18px; left: 0; top: -9px; }
+#crosshair::after  { height: 1px; width: 18px; top: 0; left: -9px; }
+#crosshair-dot {
+  position: fixed; top: 50%; left: 50%;
+  transform: translate(-50%,-50%);
+  width: 3px; height: 3px;
+  border-radius: 50%;
+  background: rgba(160,124,255,0.45);
+  pointer-events: none; z-index: 5;
+}
+
+/* ── HUD ── */
+#hud {
+  position: fixed; inset: 0;
+  pointer-events: none;
+  z-index: 10;
+}
+
+/* ── TOP BAR ── */
+#top-bar {
+  position: absolute; top: 0; left: 0; right: 0;
+  display: flex; align-items: flex-start; justify-content: space-between;
+  padding: clamp(16px, 3vw, 28px) clamp(16px, 3.5vw, 32px);
+  pointer-events: none;
+}
+
+#title-block { pointer-events: none; }
+#title-block .eyebrow {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.52rem;
+  letter-spacing: 0.35em;
+  color: var(--accent-violet);
+  text-transform: uppercase;
+  opacity: 0.8;
+  margin-bottom: 5px;
+}
+#title-block h1 {
+  font-family: 'Syne', sans-serif;
+  font-weight: 800;
+  font-size: clamp(1.1rem, 3.8vw, 1.7rem);
+  letter-spacing: 0.08em;
+  color: #fff;
+  text-shadow: 0 0 30px rgba(140,100,255,0.5), 0 0 60px rgba(0,200,170,0.15);
+  text-transform: uppercase;
+  line-height: 1.1;
+}
+#title-block .sub {
+  font-size: 0.54rem;
+  letter-spacing: 0.2em;
+  color: var(--text-secondary);
+  margin-top: 5px;
+}
+#back-link {
+  pointer-events: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 12px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.58rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  text-decoration: none;
+  border: 1px solid var(--border-subtle);
+  background: var(--surface-2);
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  transition: color 0.2s, border-color 0.2s, background 0.2s;
+}
+#back-link:hover {
+  color: var(--text-primary);
+  border-color: var(--border-glow);
+  background: var(--surface-hover);
+}
+#back-link svg { width: 11px; height: 11px; flex-shrink: 0; }
+
+/* ── SIDE DOCK TOGGLE (tab) ── */
+#dock-tab {
+  position: absolute;
+  right: var(--panel-w);
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: all;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  width: 22px;
+  height: 64px;
+  background: var(--surface-1);
+  border: 1px solid var(--border-subtle);
+  border-right: none;
+  border-radius: var(--radius-md) 0 0 var(--radius-md);
+  transition: right 0.45s cubic-bezier(0.4,0,0.2,1), background 0.2s, border-color 0.2s;
+  z-index: 30;
+  backdrop-filter: blur(24px) saturate(1.4);
+  -webkit-backdrop-filter: blur(24px) saturate(1.4);
+}
+#dock-tab:hover {
+  background: var(--surface-hover);
+  border-color: var(--border-mid);
+}
+#dock-tab.collapsed { right: 0; }
+#dock-tab .tab-icon {
+  display: flex; flex-direction: column; gap: 3px;
+  transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
+}
+#dock-tab.collapsed .tab-icon { transform: scaleX(-1); }
+#dock-tab .tab-icon span {
+  display: block;
+  width: 8px; height: 1px;
+  background: var(--accent-violet);
+  border-radius: 2px;
+  opacity: 0.6;
+  transition: opacity 0.2s, width 0.2s;
+}
+#dock-tab .tab-icon span:nth-child(2) { width: 5px; }
+#dock-tab:hover .tab-icon span { opacity: 1; width: 8px; }
+#dock-tab .tab-label {
+  font-size: 0.32rem;
+  letter-spacing: 0.22em;
+  color: var(--text-tertiary);
+  writing-mode: vertical-rl;
+  text-transform: uppercase;
+}
+
+/* ── SIDE DOCK PANEL ── */
+#side-dock {
+  position: absolute;
+  right: 0; top: 0; bottom: 0;
+  width: var(--panel-w);
+  display: flex;
+  flex-direction: column;
+  pointer-events: all;
+  background: var(--surface-1);
+  border-left: 1px solid var(--border-subtle);
+  backdrop-filter: blur(32px) saturate(1.6);
+  -webkit-backdrop-filter: blur(32px) saturate(1.6);
+  transform: translateX(0);
+  transition: transform 0.45s cubic-bezier(0.4,0,0.2,1);
+  z-index: 25;
+  overflow: hidden;
+  box-shadow: -16px 0 48px rgba(0,0,0,0.45), -1px 0 0 rgba(110,80,240,0.08);
+}
+#side-dock.collapsed {
+  transform: translateX(100%);
+}
+
+/* Iridescent left border accent */
+#side-dock::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; bottom: 0;
+  width: 1px;
+  background: linear-gradient(180deg, transparent 0%, var(--accent-violet) 30%, var(--accent-teal) 65%, transparent 100%);
+  opacity: 0.5;
+  z-index: 1;
+}
+/* Subtle noise texture overlay */
+#side-dock::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+  pointer-events: none;
+  opacity: 0.4;
+  z-index: 0;
+}
+
+/* ── DOCK HEADER ── */
+.dock-header {
+  padding: 16px var(--panel-pad) 13px;
+  border-bottom: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.dock-header-left { display: flex; flex-direction: column; gap: 2px; }
+.dock-header-title {
+  font-family: 'Syne', sans-serif;
+  font-weight: 700;
+  font-size: 0.64rem;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--text-primary);
+}
+.dock-header-sub {
+  font-size: 0.44rem;
+  letter-spacing: 0.18em;
+  color: var(--text-tertiary);
+}
+/* Live indicator dot in header */
+.dock-header-live {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+}
+.live-dot {
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: var(--accent-teal);
+  box-shadow: 0 0 8px var(--accent-teal);
+  animation: pulse-live 2.4s ease-in-out infinite;
+}
+@keyframes pulse-live {
+  0%, 100% { opacity: 1; transform: scale(1); box-shadow: 0 0 6px var(--accent-teal); }
+  50% { opacity: 0.6; transform: scale(0.75); box-shadow: 0 0 3px var(--accent-teal); }
+}
+.live-label {
+  font-size: 0.38rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--accent-teal);
+  opacity: 0.75;
+}
+
+/* ── DOCK SCROLL AREA ── */
+.dock-scroll {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(110,80,240,0.18) transparent;
+  padding: 10px 0 4px;
+  position: relative;
+  z-index: 2;
+}
+.dock-scroll::-webkit-scrollbar { width: 2px; }
+.dock-scroll::-webkit-scrollbar-track { background: transparent; }
+.dock-scroll::-webkit-scrollbar-thumb { background: rgba(110,80,240,0.22); border-radius: 2px; }
+
+/* ── DOCK SECTION ── */
+.dock-section {
+  padding: 0 var(--panel-pad);
+  margin-bottom: 2px;
+}
+
+.section-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 9px 0 8px;
+  cursor: pointer;
+  user-select: none;
+  position: relative;
+}
+.section-trigger::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 1px;
+  background: var(--border-subtle);
+}
+.section-trigger:hover .section-title { color: rgba(210,200,255,0.85); }
+
+.section-left {
+  display: flex; align-items: center; gap: 7px;
+}
+.section-dot {
+  width: 4px; height: 4px;
+  border-radius: 50%;
+  background: rgba(110,80,240,0.4);
+  flex-shrink: 0;
+  transition: background 0.25s, box-shadow 0.25s;
+}
+.section-dot.active {
+  background: var(--accent-teal);
+  box-shadow: 0 0 6px var(--accent-teal);
+  animation: pulse-dot 2.5s ease-in-out infinite;
+}
+@keyframes pulse-dot {
+  0%, 100% { box-shadow: 0 0 5px var(--accent-teal); }
+  50% { box-shadow: 0 0 12px var(--accent-teal), 0 0 20px rgba(0,221,184,0.25); }
+}
+.section-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.52rem;
+  font-weight: 500;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  transition: color 0.18s;
+}
+.section-arrow {
+  width: 12px; height: 12px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  opacity: 0.35;
+  transition: transform 0.3s cubic-bezier(0.4,0,0.2,1), opacity 0.2s;
+}
+.section-arrow svg {
+  width: 8px; height: 8px;
+  stroke: var(--text-secondary);
+  fill: none;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.section-trigger:hover .section-arrow { opacity: 0.65; }
+.section-trigger.open .section-arrow { transform: rotate(180deg); opacity: 0.5; }
+
+.section-body {
+  overflow: hidden;
+  max-height: 0;
+  transition: max-height 0.38s cubic-bezier(0.4,0,0.2,1);
+}
+.section-body.open {
+  max-height: 700px;
+  padding-top: 2px;
+  padding-bottom: 8px;
+}
+
+/* Spacing between sections */
+.dock-section + .dock-section {
+  margin-top: 2px;
+}
+
+/* ── METRICS GRID ── */
+.metrics-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 5px;
+  padding-top: 10px;
+}
+.metric-card {
+  background: var(--surface-2);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 9px 10px 8px;
+  transition: border-color 0.2s, background 0.2s;
+  position: relative;
+  overflow: hidden;
+}
+.metric-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(155,120,255,0.2), transparent);
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.metric-card:hover { border-color: var(--border-mid); background: var(--surface-hover); }
+.metric-card:hover::before { opacity: 1; }
+
+.metric-label {
+  font-size: 0.40rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  margin-bottom: 5px;
+  line-height: 1.4;
+}
+.metric-value {
+  font-size: 0.68rem;
+  font-weight: 400;
+  color: var(--text-value);
+  letter-spacing: 0.03em;
+  line-height: 1.2;
+}
+.metric-card.span-2 { grid-column: 1 / -1; }
+.metric-card.warm .metric-value { color: var(--text-value-warm); }
+.metric-card.hot .metric-value { color: var(--accent-hot); }
+
+/* ── INFO CARDS (click-to-info) ── */
+.info-card { cursor: pointer; }
+.info-card:active { transform: scale(0.97); }
+#info-popover {
+  position: fixed;
+  left: 50%; top: 50%;
+  transform: translate(-50%, -50%) scale(0.92);
+  max-width: min(86vw, 360px);
+  background: var(--surface-1);
+  border: 1px solid var(--border-mid);
+  border-radius: var(--radius-lg);
+  padding: 16px 18px;
+  backdrop-filter: blur(32px) saturate(1.6);
+  -webkit-backdrop-filter: blur(32px) saturate(1.6);
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5), 0 0 0 1px rgba(155,120,255,0.08) inset;
+  z-index: 60;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s, transform 0.2s;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.62rem;
+  line-height: 1.55;
+  color: var(--text-primary);
+}
+#info-popover.visible {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+  pointer-events: all;
+}
+#info-popover .info-title {
+  font-family: 'Syne', sans-serif;
+  font-weight: 700;
+  font-size: 0.6rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--accent-violet);
+  margin-bottom: 8px;
+}
+#info-backdrop {
+  position: fixed; inset: 0;
+  background: rgba(2,2,10,0.55);
+  z-index: 55;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+}
+#info-backdrop.visible { opacity: 1; pointer-events: all; }
+
+/* FPS row */
+.fps-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 0 1px;
+  border-top: 1px solid var(--border-subtle);
+  margin-top: 6px;
+}
+.fps-label {
+  font-size: 0.40rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  display: flex; align-items: center; gap: 5px;
+}
+.fps-label::before {
+  content: '';
+  display: inline-block;
+  width: 3px; height: 3px;
+  border-radius: 50%;
+  background: var(--accent-teal);
+  opacity: 0.6;
+}
+#m-fps {
+  font-size: 0.60rem;
+  color: var(--accent-teal);
+  font-weight: 400;
+  opacity: 0.85;
+}
+
+/* ── TOGGLE ROWS ── */
+.overlay-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-top: 9px;
+}
+.overlay-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  border: 1px solid var(--border-subtle);
+  cursor: pointer;
+  transition: background 0.18s, border-color 0.18s, box-shadow 0.18s;
+  user-select: none;
+  gap: 8px;
+}
+.overlay-row:hover {
+  background: var(--surface-hover);
+  border-color: var(--border-mid);
+}
+.overlay-row.active {
+  background: rgba(90,60,200,0.10);
+  border-color: rgba(140,100,255,0.32);
+  box-shadow: 0 0 0 1px rgba(155,120,255,0.05) inset;
+}
+.overlay-row-left {
+  display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0;
+}
+.overlay-icon {
+  font-size: 0.72rem;
+  line-height: 1;
+  flex-shrink: 0;
+  opacity: 0.45;
+  transition: opacity 0.2s;
+  filter: grayscale(0.4);
+}
+.overlay-row.active .overlay-icon { opacity: 0.9; filter: none; }
+.overlay-name {
+  font-size: 0.50rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  transition: color 0.18s;
+  white-space: nowrap;
+}
+.overlay-row.active .overlay-name { color: var(--text-primary); }
+/* Toggle pill */
+.toggle-pill {
+  width: 26px; height: 14px;
+  border-radius: 7px;
+  background: rgba(70,50,120,0.28);
+  border: 1px solid rgba(110,80,240,0.18);
+  position: relative;
+  transition: background 0.25s, border-color 0.25s, box-shadow 0.25s;
+  flex-shrink: 0;
+}
+.overlay-row.active .toggle-pill {
+  background: rgba(0,190,160,0.18);
+  border-color: rgba(0,221,184,0.5);
+  box-shadow: 0 0 10px rgba(0,221,184,0.12);
+}
+.toggle-pill::after {
+  content: '';
+  position: absolute;
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: rgba(110,80,240,0.55);
+  top: 2px; left: 2px;
+  transition: transform 0.26s cubic-bezier(0.34,1.56,0.64,1), background 0.25s, box-shadow 0.25s;
+}
+.overlay-row.active .toggle-pill::after {
+  transform: translateX(12px);
+  background: var(--accent-teal);
+  box-shadow: 0 0 7px rgba(0,221,184,0.6);
+}
+
+/* ── PARAMETER SLIDERS ── */
+.param-list { display: flex; flex-direction: column; gap: 13px; padding-top: 10px; }
+
+.param-row { display: flex; flex-direction: column; gap: 5px; }
+.param-header { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.param-name {
+  font-size: 0.46rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+.param-val {
+  font-size: 0.54rem;
+  font-weight: 400;
+  color: var(--accent-violet);
+  min-width: 22px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Custom slider */
+.slider-track {
+  position: relative;
+  height: 18px;
+  display: flex;
+  align-items: center;
+}
+input[type=range] {
+  -webkit-appearance: none;
+  width: 100%; height: 2px;
+  background: transparent;
+  outline: none;
+  pointer-events: all;
+  position: relative;
+  z-index: 2;
+  cursor: pointer;
+}
+.slider-bg {
+  position: absolute;
+  left: 0; right: 0;
+  height: 2px;
+  background: rgba(110,80,240,0.10);
+  border-radius: 2px;
+  overflow: hidden;
+  pointer-events: none;
+}
+.slider-fill {
+  height: 100%;
+  background: linear-gradient(90deg, rgba(155,120,255,0.7), var(--accent-teal));
+  border-radius: 2px;
+  transition: width 0.04s;
+}
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 12px; height: 12px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 0 1.5px var(--accent-violet), 0 0 10px rgba(155,120,255,0.45), 0 1px 3px rgba(0,0,0,0.5);
+  cursor: pointer;
+  transition: box-shadow 0.18s, transform 0.18s;
+}
+input[type=range]:hover::-webkit-slider-thumb, input[type=range]:active::-webkit-slider-thumb {
+  box-shadow: 0 0 0 1.5px var(--accent-teal), 0 0 14px rgba(0,221,184,0.55), 0 1px 3px rgba(0,0,0,0.5);
+  transform: scale(1.1);
+}
+input[type=range]::-moz-range-thumb {
+  width: 12px; height: 12px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 0 1.5px var(--accent-violet), 0 0 10px rgba(155,120,255,0.45);
+  border: none;
+  cursor: pointer;
+}
+
+/* ── ACTION SECTION ── */
+.action-section {
+  padding: 10px var(--panel-pad) 14px;
+  flex-shrink: 0;
+  border-top: 1px solid var(--border-subtle);
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+#btn-drop, #btn-tde {
+  width: 100%;
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 400;
+  font-size: 0.50rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  padding: 11px 14px;
+  background: var(--accent-hot-dim);
+  border: 1px solid rgba(255,101,53,0.24);
+  border-radius: var(--radius-md);
+  color: var(--accent-hot);
+  cursor: pointer;
+  transition: all 0.22s;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+}
+#btn-tde {
+  background: var(--accent-violet-dim);
+  border: 1px solid rgba(155,120,255,0.28);
+  color: var(--accent-violet);
+}
+#btn-file {
+  width: 100%;
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 400;
+  font-size: 0.50rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  padding: 11px 14px;
+  background: var(--accent-teal-dim);
+  border: 1px solid rgba(0,221,184,0.28);
+  border-radius: var(--radius-md);
+  color: var(--accent-teal);
+  cursor: pointer;
+  transition: all 0.22s;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+}
+#btn-file::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(135deg, rgba(0,221,184,0.10), transparent 60%);
+  opacity: 0;
+  transition: opacity 0.22s;
+}
+#btn-file:hover {
+  border-color: rgba(0,221,184,0.55);
+  color: #5cf1d6;
+  background: rgba(0,221,184,0.14);
+  box-shadow: 0 0 20px rgba(0,221,184,0.14), 0 2px 8px rgba(0,0,0,0.3);
+  transform: translateY(-1px);
+}
+#btn-file:hover::before { opacity: 1; }
+#btn-file:active { transform: translateY(0); }
+#btn-file:disabled {
+  opacity: 0.45;
+  cursor: default;
+  transform: none !important;
+  box-shadow: none !important;
+}
+#file-status {
+  font-size: 0.48rem;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary);
+  text-align: center;
+  min-height: 14px;
+  line-height: 1.5;
+  padding: 0 4px;
+}
+#file-status a {
+  color: var(--accent-teal);
+  text-decoration: underline;
+  pointer-events: all;
+}
+#file-status.active { color: var(--accent-teal); }
+#btn-drop::before, #btn-tde::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(135deg, rgba(255,101,53,0.08), transparent 60%);
+  opacity: 0;
+  transition: opacity 0.22s;
+}
+#btn-tde::before {
+  background: linear-gradient(135deg, rgba(155,120,255,0.10), transparent 60%);
+}
+#btn-drop:hover {
+  border-color: rgba(255,101,53,0.50);
+  color: #ff8c65;
+  background: rgba(255,101,53,0.10);
+  box-shadow: 0 0 20px rgba(255,101,53,0.12), 0 2px 8px rgba(0,0,0,0.3);
+  transform: translateY(-1px);
+}
+#btn-tde:hover {
+  border-color: rgba(155,120,255,0.55);
+  color: #b9a3ff;
+  background: rgba(155,120,255,0.14);
+  box-shadow: 0 0 20px rgba(155,120,255,0.14), 0 2px 8px rgba(0,0,0,0.3);
+  transform: translateY(-1px);
+}
+#btn-drop:active, #btn-tde:active { transform: translateY(0); }
+#btn-drop:hover::before, #btn-tde:hover::before { opacity: 1; }
+.drop-icon {
+  font-size: 0.82rem;
+  line-height: 1;
+  opacity: 0.85;
+}
+/* Footer credits */
+.dock-footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  opacity: 0.28;
+}
+.dock-footer-text {
+  font-size: 0.34rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+/* drag handle – mobile only */
+.dock-handle { display: none; }
+
+/* ── MOBILE: bottom sheet ── */
+@media (max-width: 700px) {
+  :root {
+    --panel-w: 0px; /* panel doesn't take horizontal space on mobile */
+    --panel-pad: 16px;
+  }
+
+  /* Canvas fills entire screen always */
+  canvas {
+    position: fixed !important;
+    top: 0 !important; left: 0 !important;
+    width: 100vw !important; height: 100vh !important;
+    z-index: 1;
+  }
+
+  /* HUD top bar stays on top of canvas */
+  #hud { z-index: 15; }
+  #top-bar { padding: 14px 16px; }
+  #title-block .eyebrow { font-size: 0.48rem; }
+  #title-block h1 { font-size: 1.1rem; }
+  #title-block .sub { font-size: 0.48rem; }
+
+  /* Hide desktop tab entirely on mobile */
+  #dock-tab { display: none; }
+
+  /* Floating pill toggle button at bottom center */
+  #mobile-toggle {
+    display: flex;
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 50;
+    align-items: center;
+    gap: 7px;
+    padding: 10px 20px;
+    background: rgba(9,7,26,0.92);
+    border: 1px solid var(--border-mid);
+    border-radius: 30px;
+    backdrop-filter: blur(24px) saturate(1.5);
+    -webkit-backdrop-filter: blur(24px) saturate(1.5);
+    cursor: pointer;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.5), 0 0 0 1px rgba(155,120,255,0.08) inset;
+    transition: opacity 0.3s, transform 0.3s;
+    pointer-events: all;
+  }
+  #mobile-toggle.hidden-pill {
+    opacity: 0;
+    transform: translateX(-50%) translateY(10px);
+    pointer-events: none;
+  }
+  .mobile-toggle-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--accent-teal);
+    box-shadow: 0 0 8px var(--accent-teal);
+    animation: pulse-live 2.4s ease-in-out infinite;
+    flex-shrink: 0;
+  }
+  .mobile-toggle-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.52rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--text-primary);
+    opacity: 0.85;
+  }
+  .mobile-toggle-chevron {
+    font-size: 0.6rem;
+    color: var(--accent-violet);
+    opacity: 0.7;
+    transition: transform 0.3s;
+  }
+
+  /* Bottom sheet panel */
+  #side-dock {
+    position: fixed;
+    top: auto !important;
+    right: 0; bottom: 0; left: 0;
+    width: 100% !important;
+    height: auto;
+    max-height: 72vh;
+    border-left: none !important;
+    border-top: 1px solid var(--border-mid);
+    border-radius: 20px 20px 0 0;
+    transform: translateY(100%);
+    transition: transform 0.42s cubic-bezier(0.4,0,0.2,1);
+    z-index: 40;
+    /* stronger blur on mobile for legibility over canvas */
+    backdrop-filter: blur(40px) saturate(1.8) brightness(0.85);
+    -webkit-backdrop-filter: blur(40px) saturate(1.8) brightness(0.85);
+    background: rgba(7,5,22,0.95);
+  }
+  #side-dock::before {
+    top: 0; left: 10%; right: 10%; bottom: auto;
+    width: auto; height: 1px;
+    background: linear-gradient(90deg, transparent, var(--accent-violet), var(--accent-teal), transparent);
+    opacity: 0.6;
+  }
+  #side-dock::after { display: none; }
+  #side-dock.collapsed { transform: translateY(100%); }
+  #side-dock:not(.collapsed) { transform: translateY(0); }
+
+  /* Drag handle at top of sheet */
+  #side-dock .dock-handle {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 14px 0 6px;
+    flex-shrink: 0;
+    cursor: pointer;
+    /* wide tap target */
+    width: 100%;
+    -webkit-tap-highlight-color: transparent;
+  }
+  #side-dock .dock-handle::before {
+    content: '';
+    display: block;
+    width: 40px; height: 4px;
+    border-radius: 2px;
+    background: rgba(155,120,255,0.30);
+    transition: background 0.2s, width 0.2s;
+  }
+  #side-dock .dock-handle:active::before {
+    background: rgba(0,221,184,0.55);
+    width: 52px;
+  }
+
+  /* Larger touch targets */
+  .section-trigger { padding: 12px 0; }
+  .overlay-row { padding: 12px 12px; }
+  .overlay-name { font-size: 0.56rem; }
+  .metric-label { font-size: 0.44rem; }
+  .metric-value { font-size: 0.74rem; }
+  .param-name { font-size: 0.50rem; }
+  input[type=range]::-webkit-slider-thumb { width: 18px; height: 18px; }
+  #btn-drop { padding: 14px 16px; font-size: 0.54rem; }
+
+  /* Section body max-height bigger on mobile for full content */
+  .section-body.open { max-height: 900px; }
+
+  /* Metrics 2-col stays but more generous */
+  .metrics-grid { gap: 6px; }
+  .metric-card { padding: 10px 11px 9px; }
+}
+
+</style>
+</head>
+<body>
+
+<div class="scanline"></div>
+<div id="crosshair"></div>
+<div id="crosshair-dot"></div>
+
+<canvas id="c"></canvas>
+
+<div id="info-backdrop"></div>
+<div id="info-popover">
+  <div class="info-title" id="info-popover-title"></div>
+  <div id="info-popover-body"></div>
+</div>
+
+<div id="hud">
+  <!-- TOP BAR -->
+  <div id="top-bar">
+    <div id="title-block">
+      <div class="eyebrow">Astrophysics Lab / Sector 7</div>
+      <h1>Singularity</h1>
+      <div class="sub">Schwarzschild Black Hole — M = 10⁶ M☉</div>
+      <a href="index.html" id="back-link">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        Back
+      </a>
+    </div>
+  </div>
+</div>
+
+<!-- DOCK TAB -->
+<div id="dock-tab" class="collapsed">
+  <div class="tab-icon">
+    <span></span><span></span><span></span>
+  </div>
+  <div class="tab-label">ctrl</div>
+</div>
+
+<!-- MOBILE FLOATING TOGGLE (hidden on desktop via CSS) -->
+<div id="mobile-toggle" style="display:none;">
+  <div class="mobile-toggle-dot"></div>
+  <div class="mobile-toggle-label">Controls</div>
+  <div class="mobile-toggle-chevron">↑</div>
+</div>
+
+<!-- SIDE DOCK PANEL -->
+<div id="side-dock" class="collapsed">
+  <!-- Drag handle (mobile only) -->
+  <div class="dock-handle"></div>
+
+  <div class="dock-header">
+    <div class="dock-header-left">
+      <div class="dock-header-title">Mission Control</div>
+      <div class="dock-header-sub">Sim Interface v2.4</div>
+    </div>
+    <div class="dock-header-live">
+      <div class="live-dot"></div>
+      <div class="live-label">Live</div>
+    </div>
+  </div>
+
+  <div class="dock-scroll">
+
+    <!-- SECTION 1: Live Telemetry -->
+    <div class="dock-section">
+      <div class="section-trigger open" data-target="sec-telemetry">
+        <div class="section-left">
+          <div class="section-dot active"></div>
+          <div class="section-title">Live Telemetry</div>
+        </div>
+        <div class="section-arrow"><svg viewBox="0 0 10 6"><polyline points="1,1 5,5 9,1"/></svg></div>
+      </div>
+      <div class="section-body open" id="sec-telemetry">
+        <div class="metrics-grid">
+          <div class="metric-card info-card" data-info="The radius of the event horizon — the boundary past which nothing, not even light, can escape.">
+            <div class="metric-label">Schw. Radius</div>
+            <div class="metric-value" id="m-rs">2.95×10⁶ km</div>
+          </div>
+          <div class="metric-card info-card" data-info="The radius where light can theoretically orbit the black hole in an unstable circular path, 1.5× the event horizon radius.">
+            <div class="metric-label">Photon Sphere</div>
+            <div class="metric-value" id="m-ps">1.5 r<sub style="font-size:0.55em">s</sub></div>
+          </div>
+          <div class="metric-card warm info-card" data-info="The faint thermal radiation a black hole emits due to quantum effects near the horizon. Colder for bigger black holes.">
+            <div class="metric-label">Hawking Temp</div>
+            <div class="metric-value" id="m-ht">6.17×10⁻¹⁴ K</div>
+          </div>
+          <div class="metric-card hot info-card" data-info="Time slows for an object falling toward the horizon, as seen by a distant observer — it appears to freeze at the boundary, stretching to infinity.">
+            <div class="metric-label">Time Dilation</div>
+            <div class="metric-value" id="m-td">∞ at r<sub style="font-size:0.55em">s</sub></div>
+          </div>
+        </div>
+        <div class="fps-row">
+          <div class="fps-label">Render Rate</div>
+          <div id="m-fps">— fps</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTION 2: Overlays -->
+    <div class="dock-section">
+      <div class="section-trigger open" data-target="sec-overlays">
+        <div class="section-left">
+          <div class="section-dot"></div>
+          <div class="section-title">Overlays</div>
+        </div>
+        <div class="section-arrow"><svg viewBox="0 0 10 6"><polyline points="1,1 5,5 9,1"/></svg></div>
+      </div>
+      <div class="section-body open" id="sec-overlays">
+        <div class="overlay-list">
+          <div class="overlay-row active" id="btn-grid">
+            <div class="overlay-row-left">
+              <span class="overlay-icon">⊞</span>
+              <div class="overlay-name">Spacetime Grid</div>
+            </div>
+            <div class="toggle-pill"></div>
+          </div>
+          <div class="overlay-row" id="btn-lens">
+            <div class="overlay-row-left">
+              <span class="overlay-icon">◎</span>
+              <div class="overlay-name">Grav. Lensing</div>
+            </div>
+            <div class="toggle-pill"></div>
+          </div>
+          <div class="overlay-row" id="btn-jets">
+            <div class="overlay-row-left">
+              <span class="overlay-icon">⇅</span>
+              <div class="overlay-name">Relativistic Jets</div>
+            </div>
+            <div class="toggle-pill"></div>
+          </div>
+          <div class="overlay-row" id="btn-hawking">
+            <div class="overlay-row-left">
+              <span class="overlay-icon">✦</span>
+              <div class="overlay-name">Hawking Radiation</div>
+            </div>
+            <div class="toggle-pill"></div>
+          </div>
+          <div class="overlay-row" id="btn-funnel">
+            <div class="overlay-row-left">
+              <span class="overlay-icon">▽</span>
+              <div class="overlay-name">Embedding Funnel</div>
+            </div>
+            <div class="toggle-pill"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTION 3: Parameters -->
+    <div class="dock-section">
+      <div class="section-trigger open" data-target="sec-params">
+        <div class="section-left">
+          <div class="section-dot"></div>
+          <div class="section-title">Parameters</div>
+        </div>
+        <div class="section-arrow"><svg viewBox="0 0 10 6"><polyline points="1,1 5,5 9,1"/></svg></div>
+      </div>
+      <div class="section-body open" id="sec-params">
+        <div class="param-list">
+          <div class="param-row">
+            <div class="param-header">
+              <div class="param-name">Disk Intensity</div>
+              <div class="param-val" id="vl-disk">70</div>
+            </div>
+            <div class="slider-track">
+              <div class="slider-bg"><div class="slider-fill" id="sf-disk" style="width:70%"></div></div>
+              <input type="range" id="sl-disk" min="0" max="100" value="70">
+            </div>
+          </div>
+          <div class="param-row">
+            <div class="param-header">
+              <div class="param-name">Curvature Grid</div>
+              <div class="param-val" id="vl-grid">60</div>
+            </div>
+            <div class="slider-track">
+              <div class="slider-bg"><div class="slider-fill" id="sf-grid" style="width:60%"></div></div>
+              <input type="range" id="sl-grid" min="0" max="100" value="60">
+            </div>
+          </div>
+          <div class="param-row">
+            <div class="param-header">
+              <div class="param-name">Lensing Strength</div>
+              <div class="param-val" id="vl-lens">55</div>
+            </div>
+            <div class="slider-track">
+              <div class="slider-bg"><div class="slider-fill" id="sf-lens" style="width:55%"></div></div>
+              <input type="range" id="sl-lens" min="0" max="100" value="55">
+            </div>
+          </div>
+          <div class="param-row">
+            <div class="param-header">
+              <div class="param-name">Rotation Speed</div>
+              <div class="param-val" id="vl-spin">30</div>
+            </div>
+            <div class="slider-track">
+              <div class="slider-bg"><div class="slider-fill" id="sf-spin" style="width:30%"></div></div>
+              <input type="range" id="sl-spin" min="0" max="100" value="30">
+            </div>
+          </div>
+          <div class="param-row">
+            <div class="param-header">
+              <div class="param-name">Mass (M☉)</div>
+              <div class="param-val" id="vl-mass">1.0M</div>
+            </div>
+            <div class="slider-track">
+              <div class="slider-bg"><div class="slider-fill" id="sf-mass" style="width:50%"></div></div>
+              <input type="range" id="sl-mass" min="1" max="100" value="50">
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTION 4: Camera Presets -->
+    <div class="dock-section">
+      <div class="section-trigger open" data-target="sec-camera">
+        <div class="section-left">
+          <div class="section-dot"></div>
+          <div class="section-title">Camera</div>
+        </div>
+        <div class="section-arrow"><svg viewBox="0 0 10 6"><polyline points="1,1 5,5 9,1"/></svg></div>
+      </div>
+      <div class="section-body open" id="sec-camera">
+        <div class="overlay-list">
+          <div class="overlay-row" id="btn-cam-top">
+            <div class="overlay-row-left">
+              <span class="overlay-icon">⬇</span>
+              <div class="overlay-name">Top-Down</div>
+            </div>
+          </div>
+          <div class="overlay-row" id="btn-cam-edge">
+            <div class="overlay-row-left">
+              <span class="overlay-icon">▬</span>
+              <div class="overlay-name">Edge-On</div>
+            </div>
+          </div>
+          <div class="overlay-row" id="btn-cam-orbit">
+            <div class="overlay-row-left">
+              <span class="overlay-icon">↻</span>
+              <div class="overlay-name">Auto-Orbit</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- DROP OBJECT ACTION -->
+  <div class="action-section">
+    <button id="btn-drop">
+      <span class="drop-icon">◉</span>
+      Drop Object into Singularity
+    </button>
+    <button id="btn-tde">
+      <span class="drop-icon">✷</span>
+      Trigger Tidal Disruption
+    </button>
+    <input type="file" id="file-input" style="display:none" />
+    <button id="btn-file">
+      <span class="drop-icon">⛛</span>
+      Spaghettify a File
+    </button>
+    <div id="file-status"></div>
+    <div class="dock-footer">
+      <div class="dock-footer-text">Schwarzschild · GR Sim · v2.4</div>
+    </div>
+  </div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+// ─── CONFIG ──────────────────────────────────────────────────────────────────
+const CFG = {
+  diskIntensity: 0.70, gridOpacity: 0.60,
+  lensStrength: 0.55,  spinSpeed: 0.30,
+  showGrid: true, showLens: false, showJets: false, showHawking: false, showFunnel: false,
+};
+
+// ─── SCENE ───────────────────────────────────────────────────────────────────
+const canvas = document.getElementById('c');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.5;
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x04040f);
+scene.fog = new THREE.FogExp2(0x020210, 0.007);
+
+const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.01, 2000);
+camera.position.set(0, 14, 38);
+camera.lookAt(0, 0, 0);
+
+// ─── STARFIELD ───────────────────────────────────────────────────────────────
+function buildStarfield() {
+  const count = 14000;
+  const geo = new THREE.BufferGeometry();
+  const pos = new Float32Array(count * 3);
+  const col = new Float32Array(count * 3);
+  for (let i = 0; i < count; i++) {
+    const r = 300 + Math.random() * 700;
+    const theta = Math.random() * Math.PI * 2;
+    const phi = Math.acos(2 * Math.random() - 1);
+    pos[i*3]   = r * Math.sin(phi) * Math.cos(theta);
+    pos[i*3+1] = r * Math.sin(phi) * Math.sin(theta);
+    pos[i*3+2] = r * Math.cos(phi);
+    const t = Math.random();
+    col[i*3]   = 0.7 + t * 0.3;
+    col[i*3+1] = 0.75 + t * 0.2;
+    col[i*3+2] = 1.0;
+  }
+  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  const mat = new THREE.PointsMaterial({ size: 0.22, vertexColors: true, transparent: true, opacity: 0.8 });
+  return new THREE.Points(geo, mat);
+}
+scene.add(buildStarfield());
+
+// ─── SPACETIME GRID ──────────────────────────────────────────────────────────
+function buildSpacetimeGrid() {
+  const group = new THREE.Group();
+  const SIZE = 44, DIVS = 22, RS = 3.5, WARP = 5.5;
+  function warpPoint(x, y, z) {
+    const r = Math.sqrt(x*x + y*y + z*z);
+    if (r < 0.001) return new THREE.Vector3(0, 0, 0);
+    if (r <= RS) {
+      const clampR = RS * 0.18;
+      return new THREE.Vector3((x/r)*clampR, (y/r)*clampR, (z/r)*clampR);
+    }
+    const iso = 1.0 + (RS * 0.5 * WARP) / r;
+    const rWarped = r / (iso * iso);
+    const factor = rWarped / r;
+    return new THREE.Vector3(x * factor, y * factor, z * factor);
+  }
+  const N = DIVS + 1, step = (SIZE * 2) / DIVS;
+  const pts = [];
+  for (let i = 0; i < N; i++) {
+    pts.push([]);
+    for (let j = 0; j < N; j++) {
+      pts[i].push([]);
+      for (let k = 0; k < N; k++) {
+        pts[i][j].push(warpPoint(-SIZE+i*step, -SIZE+j*step, -SIZE+k*step));
+      }
+    }
+  }
+  function lineColor(i, j, k) {
+    const x=-SIZE+i*step, y=-SIZE+j*step, z=-SIZE+k*step;
+    const r = Math.sqrt(x*x+y*y+z*z);
+    const t = Math.max(0, Math.min(1, 1 - r/(SIZE*1.2)));
+    return new THREE.Color().setHSL(0.72 - t*0.15, 0.9, 0.06 + t*0.5);
+  }
+  function addLine(p1, p2, col, opacity) {
+    const geo = new THREE.BufferGeometry().setFromPoints([p1, p2]);
+    const mat = new THREE.LineBasicMaterial({ color: col, transparent: true, opacity, depthWrite: false, blending: THREE.AdditiveBlending });
+    group.add(new THREE.Line(geo, mat));
+  }
+  const SKIP = 2;
+  for (let j = 0; j < N; j += SKIP) for (let k = 0; k < N; k += SKIP) {
+    const segs = []; for (let i = 0; i < N; i++) segs.push(pts[i][j][k]);
+    const col = lineColor(N/2,j,k);
+    const rr = Math.sqrt((-SIZE+j*step)**2+(-SIZE+k*step)**2);
+    const op = 0.06 + Math.max(0, 0.22*(1-rr/(SIZE*1.5)));
+    for (let s = 0; s < segs.length-1; s++) addLine(segs[s],segs[s+1],col,op);
+  }
+  for (let i = 0; i < N; i += SKIP) for (let k = 0; k < N; k += SKIP) {
+    const segs = []; for (let j = 0; j < N; j++) segs.push(pts[i][j][k]);
+    const col = lineColor(i,N/2,k);
+    const rr = Math.sqrt((-SIZE+i*step)**2+(-SIZE+k*step)**2);
+    const op = 0.06 + Math.max(0, 0.22*(1-rr/(SIZE*1.5)));
+    for (let s = 0; s < segs.length-1; s++) addLine(segs[s],segs[s+1],col,op);
+  }
+  for (let i = 0; i < N; i += SKIP) for (let j = 0; j < N; j += SKIP) {
+    const segs = []; for (let k = 0; k < N; k++) segs.push(pts[i][j][k]);
+    const col = lineColor(i,j,N/2);
+    const rr = Math.sqrt((-SIZE+i*step)**2+(-SIZE+j*step)**2);
+    const op = 0.06 + Math.max(0, 0.22*(1-rr/(SIZE*1.5)));
+    for (let s = 0; s < segs.length-1; s++) addLine(segs[s],segs[s+1],col,op);
+  }
+  return group;
+}
+const gridGroup = buildSpacetimeGrid();
+scene.add(gridGroup);
+
+// ─── 2D EMBEDDING DIAGRAM: Flamm's paraboloid (the textbook "funnel") ─────────
+// This is the classic rubber-sheet visualization of spacetime curvature, derived
+// directly from the Schwarzschild metric's spatial embedding into flat 3D space:
+//   z(r) = 2 * sqrt( rs * (r - rs) )     for r >= rs
+// where rs is the Schwarzschild radius. It is purely a function of r — no noise,
+// no artistic shaping, just that equation evaluated across a flat polar grid and
+// pushed downward (the conventional plotting direction for the "funnel" picture).
+function buildSpacetimeFunnel() {
+  const group = new THREE.Group();
+  const RS = 3.5;            // same Schwarzschild radius used by the rest of the sim
+  const R_OUT = 26;          // outer radius of the sheet
+  const RADIAL_DIVS = 64;
+  const ANGULAR_DIVS = 96;
+  // Real Flamm's paraboloid depth grows unbounded with R_OUT; a raw plot would
+  // dive far below the camera's normal framing and bury itself under the disk.
+  // DEPTH_SCALE rescales the equation's output for legible on-screen depth while
+  // preserving its exact shape (every point is still proportional to the true
+  // z(r) = 2*sqrt(rs*(r-rs)) curve — this is a uniform display scale, not a
+  // distortion of the curvature itself).
+  const DEPTH_SCALE = 0.55;
+
+  function depthAt(r) {
+    const rc = Math.max(r, RS); // clamp: the embedding is undefined inside rs
+    return 2 * Math.sqrt(RS * (rc - RS)) * DEPTH_SCALE;
+  }
+
+  // Build vertex grid in (radius, angle) space, mapped to x/z space, with the
+  // throat (smallest r) as the DEEPEST point and the surface flattening toward
+  // y=0 as r grows large — the correct physical shape of Flamm's paraboloid.
+  // (Previous version used y = -depthAt(r) directly: since depthAt(r) grows
+  // WITH r, that put the throat at y=0 and sent the outer rim furthest down —
+  // i.e. narrow at the top, flaring open at the bottom, the literal opposite
+  // of the intended funnel.)
+  const maxDepth = depthAt(R_OUT);
+  const verts = [];
+  for (let i = 0; i <= RADIAL_DIVS; i++) {
+    const r = RS + (R_OUT - RS) * (i / RADIAL_DIVS) ** 1.6; // denser sampling near the throat
+    const y = depthAt(r) - maxDepth; // throat (r=RS) → -maxDepth (deepest); far rim → 0 (flat)
+    const row = [];
+    for (let j = 0; j <= ANGULAR_DIVS; j++) {
+      const theta = (j / ANGULAR_DIVS) * Math.PI * 2;
+      row.push(new THREE.Vector3(r * Math.cos(theta), y, r * Math.sin(theta)));
+    }
+    verts.push(row);
+  }
+
+  // Wireframe mesh: radial lines (constant theta) + ring lines (constant r).
+  // Styled to match the reference look — fine, dense cyan grid lines with an
+  // additive glow, brightest near the throat and fading out toward the far field,
+  // no solid fill (a pure line-grid embedding diagram rather than a shaded sheet).
+  function colorAt(r) {
+    const t = Math.max(0, Math.min(1, 1 - (r - RS) / (R_OUT - RS)));
+    return new THREE.Color().setHSL(0.50 + t * 0.04, 0.75, 0.32 + t * 0.38);
+  }
+
+  // Ring lines (constant radius) — denser near the throat for the fine mesh look.
+  for (let i = 0; i <= RADIAL_DIVS; i++) {
+    const r = RS + (R_OUT - RS) * (i / RADIAL_DIVS) ** 1.6;
+    const pts = verts[i].slice();
+    pts.push(pts[0]);
+    const geo = new THREE.BufferGeometry().setFromPoints(pts);
+    const t = Math.max(0, Math.min(1, 1 - (r - RS) / (R_OUT - RS)));
+    const op = 0.10 + 0.5 * t;
+    const mat = new THREE.LineBasicMaterial({
+      color: colorAt(r), transparent: true, opacity: op,
+      depthWrite: false, blending: THREE.AdditiveBlending,
+    });
+    group.add(new THREE.Line(geo, mat));
+  }
+  // Radial lines (constant theta) — many thin spokes, like the reference grid.
+  const RADIAL_LINE_COUNT = 48;
+  for (let j = 0; j < RADIAL_LINE_COUNT; j++) {
+    const jj = Math.round((j / RADIAL_LINE_COUNT) * ANGULAR_DIVS);
+    const pts = verts.map(row => row[jj]);
+    const geo = new THREE.BufferGeometry().setFromPoints(pts);
+    const mat = new THREE.LineBasicMaterial({
+      color: colorAt(RS * 1.5), transparent: true, opacity: 0.22,
+      depthWrite: false, blending: THREE.AdditiveBlending,
+    });
+    group.add(new THREE.Line(geo, mat));
+  }
+
+  // A thin bright rim right at the throat (r = rs) makes the horizon's location
+  // on the sheet unambiguous, since the equation itself goes vertical there.
+  const rimPts = verts[0].slice(); rimPts.push(rimPts[0]);
+  const rimGeo = new THREE.BufferGeometry().setFromPoints(rimPts);
+  const rimMat = new THREE.LineBasicMaterial({
+    color: 0x9b78ff, transparent: true, opacity: 0.8,
+    depthWrite: false, blending: THREE.AdditiveBlending,
+  });
+  group.add(new THREE.Line(rimGeo, rimMat));
+
+  // The diagram is a standalone side-view visualization, not part of the same
+  // 3D world as the disk/horizon — without this offset its throat clips straight
+  // through the accretion disk and event-horizon sphere, which is what made it
+  // look broken (the only visible bit was buried behind/inside other objects).
+  group.position.y = 6;
+
+  group.visible = false;
+  return group;
+}
+const funnelGroup = buildSpacetimeFunnel();
+scene.add(funnelGroup);
+
+// ─── EVENT HORIZON ───────────────────────────────────────────────────────────
+const horizonGeo = new THREE.SphereGeometry(3.5, 128, 128);
+const horizonMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
+const horizon = new THREE.Mesh(horizonGeo, horizonMat);
+scene.add(horizon);
+
+// ─── CORONA ──────────────────────────────────────────────────────────────────
+const coronaGeo = new THREE.SphereGeometry(9.0, 64, 64);
+const coronaMat = new THREE.ShaderMaterial({
+  uniforms: { time: { value: 0 } },
+  vertexShader: `
+    varying vec3 vNormal; varying vec3 vViewDir;
+    void main() {
+      vNormal = normalize(normalMatrix * normal);
+      vec4 mvPos = modelViewMatrix * vec4(position, 1.0);
+      vViewDir = normalize(-mvPos.xyz);
+      gl_Position = projectionMatrix * mvPos;
+    }`,
+  fragmentShader: `
+    uniform float time;
+    varying vec3 vNormal; varying vec3 vViewDir;
+    void main() {
+      float rim = 1.0 - abs(dot(vNormal, vViewDir));
+      rim = clamp(rim, 0.0, 1.0);
+      float glow = pow(1.0 - rim, 1.6);
+      glow *= 0.90 + 0.10 * sin(time * 1.7);
+      vec3 innerCol = vec3(1.0, 0.55, 0.3);
+      vec3 outerCol = vec3(0.85, 0.05, 0.0);
+      vec3 col = mix(outerCol, innerCol, pow(1.0 - rim, 3.0));
+      float alpha = glow * 0.82;
+      gl_FragColor = vec4(col * glow, alpha);
+    }`,
+  transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.BackSide,
+});
+const coronaMesh = new THREE.Mesh(coronaGeo, coronaMat);
+scene.add(coronaMesh);
+
+function makeGlowRing(radius, tubeR, color, opacity) {
+  const geo = new THREE.TorusGeometry(radius, tubeR, 32, 200);
+  const mat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity, depthWrite: false, blending: THREE.AdditiveBlending });
+  return new THREE.Mesh(geo, mat);
+}
+const glowRing1 = makeGlowRing(4.2, 0.12, 0xcc1100, 0.55);
+glowRing1.rotation.x = Math.PI / 2;
+scene.add(glowRing1);
+
+// ─── ACCRETION DISK ──────────────────────────────────────────────────────────
+function buildAccretionDisk() {
+  const group = new THREE.Group();
+  const RINGS = 80, innerR = 4.0, outerR = 22;
+  for (let i = 0; i < RINGS; i++) {
+    const t = i / (RINGS - 1), r = innerR + t * (outerR - innerR);
+    const tempT = 1 - t;
+    const color = new THREE.Color().setHSL(0.00 + tempT*0.02, 1.0, 0.08 + tempT*0.62);
+    const opacity = (0.9 - t * 0.85) * 1.0;
+    const tube = 0.018 + (1 - t) * 0.12;
+    const geo = new THREE.TorusGeometry(r, tube, 4, 300);
+    const mat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity, depthWrite: false });
+    const ring = new THREE.Mesh(geo, mat);
+    ring.userData.baseR = r; ring.userData.t = t;
+    group.add(ring);
+  }
+  const diskGeo = new THREE.RingGeometry(innerR, outerR, 256, 12);
+  const diskMat = new THREE.ShaderMaterial({
+    uniforms: { time: { value: 0 }, intensity: { value: 0.7 } },
+    vertexShader: `varying vec2 vUv; varying float vR;
+      void main() { vUv = uv; vR = length(position.xy); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+    fragmentShader: `
+      uniform float time; uniform float intensity;
+      varying vec2 vUv; varying float vR;
+      float hash(float n) { return fract(sin(n) * 43758.5453); }
+      void main() {
+        float innerR = 4.0; float outerR = 22.0;
+        float t = clamp((vR - innerR) / (outerR - innerR), 0.0, 1.0);
+        float angle = atan(vUv.y - 0.5, vUv.x - 0.5);
+        float doppler = 0.5 + 0.5 * cos(angle + time * 0.6);
+        float brightness = (1.0 - t) * (1.0 - t) * doppler * intensity;
+        vec3 hotCol = vec3(1.0, 0.45 + (1.0-t)*0.35, 0.2);
+        vec3 coolCol = vec3(0.6, 0.04, 0.0);
+        vec3 col = mix(coolCol, hotCol, 1.0 - t);
+        float noise = hash(floor(vR * 8.0 + time * 2.0)) * 0.3 + 0.7;
+        gl_FragColor = vec4(col * brightness * noise, brightness * 0.6);
+      }`,
+    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide,
+  });
+  const diskMesh = new THREE.Mesh(diskGeo, diskMat);
+  diskMesh.userData.isDiskShader = true;
+  group.add(diskMesh);
+  return group;
+}
+const diskGroup = buildAccretionDisk();
+diskGroup.rotation.x = Math.PI / 2;
+scene.add(diskGroup);
+
+// ─── LENSING RINGS ───────────────────────────────────────────────────────────
+function buildLensingRings() {
+  const group = new THREE.Group();
+  [6.0, 7.5, 9.2, 11.8].forEach((r, idx) => {
+    const geo = new THREE.TorusGeometry(r, 0.04 - idx*0.006, 16, 256);
+    const mat = new THREE.MeshBasicMaterial({
+      color: new THREE.Color().setHSL(0.55+idx*0.05, 1, 0.65),
+      transparent: true, opacity: 0.18 - idx*0.03, depthWrite: false, blending: THREE.AdditiveBlending,
+    });
+    const ring = new THREE.Mesh(geo, mat);
+    ring.rotation.x = Math.PI/2 + (idx*0.08);
+    group.add(ring);
+  });
+  group.visible = false;
+  return group;
+}
+const lensingGroup = buildLensingRings();
+scene.add(lensingGroup);
+
+// ─── JETS ────────────────────────────────────────────────────────────────────
+function buildJets() {
+  const group = new THREE.Group();
+
+  // ── Soft volumetric glow core tubes (two thin glowing spines) ──
+  function makeGlowSpine(dir) {
+    const points = [];
+    for (let i = 0; i <= 80; i++) {
+      const t = i/80, y = dir*(3.8 + t*54), wobble = Math.sin(t*12)*0.18*t;
+      points.push(new THREE.Vector3(wobble, y, 0));
+    }
+    const curve = new THREE.CatmullRomCurve3(points);
+    // Outer soft glow
+    const geoOuter = new THREE.TubeGeometry(curve, 100, 0.55, 8, false);
+    const matOuter = new THREE.MeshBasicMaterial({
+      color: new THREE.Color(0.55, 0.78, 1.0),
+      transparent: true, opacity: 0.04,
+      blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide
+    });
+    // Mid glow
+    const geoMid = new THREE.TubeGeometry(curve, 100, 0.22, 8, false);
+    const matMid = new THREE.MeshBasicMaterial({
+      color: new THREE.Color(0.7, 0.88, 1.0),
+      transparent: true, opacity: 0.10,
+      blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide
+    });
+    // Bright core
+    const geoCore = new THREE.TubeGeometry(curve, 100, 0.06, 6, false);
+    const matCore = new THREE.MeshBasicMaterial({
+      color: new THREE.Color(0.92, 0.97, 1.0),
+      transparent: true, opacity: 0.55,
+      blending: THREE.AdditiveBlending, depthWrite: false
+    });
+    group.add(new THREE.Mesh(geoOuter, matOuter));
+    group.add(new THREE.Mesh(geoMid,  matMid));
+    group.add(new THREE.Mesh(geoCore, matCore));
+  }
+  makeGlowSpine(1); makeGlowSpine(-1);
+
+  // ── Volumetric soft-particle system ──
+  const count = 6000;
+  const geo = new THREE.BufferGeometry();
+
+  const pos   = new Float32Array(count * 3);
+  const vel   = new Float32Array(count * 3);
+  const life  = new Float32Array(count);      // 0..1
+  const maxL  = new Float32Array(count);      // lifetime
+  const sz    = new Float32Array(count);      // base size
+  const seed  = new Float32Array(count);      // random seed for shimmer
+
+  const RS_JET = 3.8;
+  for (let i = 0; i < count; i++) {
+    const sign  = (i % 2 === 0) ? 1 : -1;
+    const frac  = Math.random();
+    const cone  = frac * frac * 2.8;           // narrow at base, wider far
+    const angle = Math.random() * Math.PI * 2;
+    pos[i*3]   = Math.cos(angle) * cone * (0.5 + Math.random()*0.5);
+    pos[i*3+1] = sign * (RS_JET + frac * 52 + Math.random() * 4);
+    pos[i*3+2] = Math.sin(angle) * cone * (0.5 + Math.random()*0.5);
+
+    const speed = 0.22 + Math.random() * 0.38;
+    vel[i*3]   = (Math.random()-0.5) * 0.015;
+    vel[i*3+1] = sign * speed;
+    vel[i*3+2] = (Math.random()-0.5) * 0.015;
+
+    life[i]  = Math.random();
+    maxL[i]  = 0.6 + Math.random() * 0.4;
+    sz[i]    = 0.8 + Math.random() * 2.2;     // varied sizes
+    seed[i]  = Math.random() * 6.28;
+  }
+
+  geo.setAttribute('position', new THREE.BufferAttribute(pos,  3));
+  geo.setAttribute('velocity', new THREE.BufferAttribute(vel,  3));
+  geo.setAttribute('life',     new THREE.BufferAttribute(life, 1));
+  geo.setAttribute('maxLife',  new THREE.BufferAttribute(maxL, 1));
+  geo.setAttribute('aSize',    new THREE.BufferAttribute(sz,   1));
+  geo.setAttribute('aSeed',    new THREE.BufferAttribute(seed, 1));
+
+  // Gaussian soft-disc shader
+  const jetMat = new THREE.ShaderMaterial({
+    uniforms: { time: { value: 0 } },
+    vertexShader: `
+      attribute float life;
+      attribute float maxLife;
+      attribute float aSize;
+      attribute float aSeed;
+      uniform float time;
+      varying float vLife;
+      varying float vFrac;
+
+      void main() {
+        vLife = life / maxLife;                          // 0=spawn, 1=die
+        float y    = abs(position.y);
+        vFrac = clamp((y - 3.8) / 52.0, 0.0, 1.0);     // 0=base, 1=tip
+
+        // fade at birth and death
+        float fade = smoothstep(0.0, 0.12, vLife) * (1.0 - smoothstep(0.78, 1.0, vLife));
+
+        // shimmer
+        float shimmer = 0.92 + 0.08 * sin(time * 4.0 + aSeed * 3.14);
+
+        // size: large near base (hot dense), shrinks at tip
+        float sizeFade = mix(1.0, 0.25, vFrac);
+        float sz = aSize * sizeFade * fade * shimmer;
+
+        vec4 mvPos = modelViewMatrix * vec4(position, 1.0);
+        gl_PointSize = sz * (280.0 / -mvPos.z);
+        gl_Position  = projectionMatrix * mvPos;
+      }
+    `,
+    fragmentShader: `
+      varying float vLife;
+      varying float vFrac;
+
+      void main() {
+        // radial distance from point centre → gaussian disc
+        vec2 uv  = gl_PointCoord - vec2(0.5);
+        float r  = length(uv) * 2.0;
+        if (r > 1.0) discard;
+
+        // soft gaussian falloff
+        float alpha = exp(-r * r * 3.5);
+
+        // colour: white-hot core → electric blue → deep indigo tip
+        vec3 hotWhite  = vec3(0.95, 0.97, 1.00);
+        vec3 elecBlue  = vec3(0.45, 0.78, 1.00);
+        vec3 deepBlue  = vec3(0.18, 0.38, 0.90);
+        vec3 indigo    = vec3(0.30, 0.12, 0.75);
+
+        vec3 col;
+        if (vFrac < 0.25)      col = mix(hotWhite, elecBlue, vFrac / 0.25);
+        else if (vFrac < 0.6)  col = mix(elecBlue, deepBlue, (vFrac-0.25)/0.35);
+        else                   col = mix(deepBlue,  indigo,  (vFrac-0.6)/0.4);
+
+        // fade at birth / death
+        float lifeFade = smoothstep(0.0, 0.12, vLife) * (1.0 - smoothstep(0.78, 1.0, vLife));
+
+        // extra radial glow halo: brighter centre
+        float halo = 1.0 - smoothstep(0.0, 0.5, r);
+        col += hotWhite * halo * 0.35 * (1.0 - vFrac);
+
+        gl_FragColor = vec4(col, alpha * lifeFade * 0.82);
+      }
+    `,
+    transparent: true,
+    depthWrite:  false,
+    blending:    THREE.AdditiveBlending,
+  });
+
+  const pts = new THREE.Points(geo, jetMat);
+  pts.userData = { pos, vel, life, maxL, sz, seed, count };
+  group.userData.jetParticles = pts;
+  group.add(pts);
+  group.visible = false;
+  return group;
+}
+const jetsGroup = buildJets();
+scene.add(jetsGroup);
+
+// ─── HAWKING RADIATION ───────────────────────────────────────────────────────
+function buildHawkingParticles() {
+  const count = 2400;
+  const geo = new THREE.BufferGeometry();
+  const pos=new Float32Array(count*3), vel=new Float32Array(count), phase=new Float32Array(count), life=new Float32Array(count), col=new Float32Array(count*3);
+  for (let i = 0; i < count; i++) {
+    const theta=Math.random()*Math.PI*2, phi=Math.acos(2*Math.random()-1), r=3.5+Math.random()*0.4;
+    pos[i*3]=r*Math.sin(phi)*Math.cos(theta); pos[i*3+1]=r*Math.sin(phi)*Math.sin(theta); pos[i*3+2]=r*Math.cos(phi);
+    vel[i]=0.02+Math.random()*0.08; phase[i]=Math.random()*Math.PI*2; life[i]=Math.random();
+    col[i*3]=0.6+Math.random()*0.4; col[i*3+1]=0.8+Math.random()*0.2; col[i*3+2]=1.0;
+  }
+  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  geo.setAttribute('velocity', new THREE.BufferAttribute(vel, 1));
+  geo.setAttribute('phase', new THREE.BufferAttribute(phase, 1));
+  geo.setAttribute('life', new THREE.BufferAttribute(life, 1));
+  geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  const mat = new THREE.PointsMaterial({ size: 0.06, vertexColors: true, transparent: true, opacity: 0.7, blending: THREE.AdditiveBlending, depthWrite: false });
+  const pts = new THREE.Points(geo, mat);
+  pts.visible = false;
+  pts.userData = { pos, vel, phase, life, count };
+  return pts;
+}
+const hawkingPts = buildHawkingParticles();
+scene.add(hawkingPts);
+
+const rsIndicator = makeGlowRing(3.5, 0.06, 0xcc1100, 0.7);
+rsIndicator.rotation.x = Math.PI / 2;
+scene.add(rsIndicator);
+
+// Photon sphere marker at the real radius: 1.5 * r_s (light can orbit here in unstable circular paths)
+const photonSphere = makeGlowRing(3.5 * 1.5, 0.025, 0x9b78ff, 0.35);
+photonSphere.rotation.x = Math.PI / 2;
+scene.add(photonSphere);
+
+// Mass slider visual feedback: scale horizon + both rings together as the mass slider changes r_s.
+// Scoped intentionally to just these three meshes (not disk/grid/jets) to avoid a full scene rebuild.
+function updatePhotonSphereScale(ratio) {
+  const clamped = Math.max(0.4, Math.min(2.2, ratio)); // keep it from disappearing or overrunning the disk
+  horizon.scale.setScalar(clamped);
+  rsIndicator.scale.setScalar(clamped);
+  photonSphere.scale.setScalar(clamped);
+}
+
+// ─── CAMERA ORBIT ────────────────────────────────────────────────────────────
+let isDragging=false, prevMouse={x:0,y:0};
+let camTheta=0.3, camPhi=1.22, camR=38; // camPhi closer to equatorial plane (~70° from vertical) for edge-on embedded look
+let funnelLookY = -2; // camera look-target y; shifts when the embedding funnel diagram is shown
+canvas.addEventListener('mousedown', e=>{isDragging=true; prevMouse={x:e.clientX,y:e.clientY};});
+canvas.addEventListener('mouseup', ()=>isDragging=false);
+canvas.addEventListener('mousemove', e=>{
+  if(!isDragging) return;
+  camTheta+=(e.clientX-prevMouse.x)*0.007;
+  camPhi=Math.max(0.1,Math.min(Math.PI-0.1,camPhi+(e.clientY-prevMouse.y)*0.007));
+  prevMouse={x:e.clientX,y:e.clientY};
+});
+canvas.addEventListener('wheel', e=>{ camR=Math.max(8,Math.min(120,camR+e.deltaY*0.04)); },{passive:true});
+let prevTouch=null;
+canvas.addEventListener('touchstart', e=>{prevTouch={x:e.touches[0].clientX,y:e.touches[0].clientY};},{passive:true});
+canvas.addEventListener('touchmove', e=>{
+  if(!prevTouch) return;
+  camTheta+=(e.touches[0].clientX-prevTouch.x)*0.008;
+  camPhi=Math.max(0.1,Math.min(Math.PI-0.1,camPhi+(e.touches[0].clientY-prevTouch.y)*0.008));
+  prevTouch={x:e.touches[0].clientX,y:e.touches[0].clientY};
+},{passive:true});
+
+// ─── UI: DOCK TOGGLE ─────────────────────────────────────────────────────────
+const dockTab    = document.getElementById('dock-tab');
+const sideDock   = document.getElementById('side-dock');
+const mobilePill = document.getElementById('mobile-toggle');
+
+function isMobile() { return window.innerWidth <= 700; }
+
+// Show mobile pill on mobile only
+function updateMobilePill() {
+  if (isMobile()) {
+    mobilePill.style.display = 'flex';
+  } else {
+    mobilePill.style.display = 'none';
+  }
+}
+updateMobilePill();
+window.addEventListener('resize', updateMobilePill);
+
+function toggleDock() {
+  const isCollapsed = sideDock.classList.toggle('collapsed');
+  dockTab.classList.toggle('collapsed', isCollapsed);
+  if (isMobile()) {
+    mobilePill.classList.toggle('hidden-pill', !isCollapsed);
+    const chevron = mobilePill.querySelector('.mobile-toggle-chevron');
+    if (chevron) chevron.textContent = isCollapsed ? '↑' : '↓';
+  }
+}
+
+dockTab.addEventListener('click', toggleDock);
+mobilePill.addEventListener('click', toggleDock);
+
+// Drag handle collapses the panel
+const dockHandle = document.querySelector('.dock-handle');
+if (dockHandle) dockHandle.addEventListener('click', toggleDock);
+
+// ─── UI: SECTION ACCORDION ───────────────────────────────────────────────────
+document.querySelectorAll('.section-trigger').forEach(trigger => {
+  trigger.addEventListener('click', () => {
+    const targetId = trigger.dataset.target;
+    const body = document.getElementById(targetId);
+    const isOpen = body.classList.toggle('open');
+    trigger.classList.toggle('open', isOpen);
+  });
+  trigger.classList.add('open');
+});
+
+// ─── UI: SLIDERS ─────────────────────────────────────────────────────────────
+function bindSlider(id, valId, fillId, key, scale=0.01) {
+  const el = document.getElementById(id);
+  const vl = document.getElementById(valId);
+  const sf = document.getElementById(fillId);
+  el.addEventListener('input', () => {
+    CFG[key] = parseFloat(el.value) * scale;
+    vl.textContent = el.value;
+    if (sf) sf.style.width = el.value + '%';
+  });
+}
+bindSlider('sl-disk','vl-disk','sf-disk','diskIntensity');
+bindSlider('sl-grid','vl-grid','sf-grid','gridOpacity');
+bindSlider('sl-lens','vl-lens','sf-lens','lensStrength');
+bindSlider('sl-spin','vl-spin','sf-spin','spinSpeed');
+
+// ─── MASS SLIDER: live physics recompute ────────────────────────────────────
+const massSlider = document.getElementById('sl-mass');
+const massValLabel = document.getElementById('vl-mass');
+const massFill = document.getElementById('sf-mass');
+const mRsDom = document.getElementById('m-rs');
+const mHtDom = document.getElementById('m-ht');
+
+function formatSci(val, unit) {
+  const exp = Math.floor(Math.log10(Math.abs(val)));
+  const mant = val / Math.pow(10, exp);
+  const supers = {'-':'⁻','0':'⁰','1':'¹','2':'²','3':'³','4':'⁴','5':'⁵','6':'⁶','7':'⁷','8':'⁸','9':'⁹'};
+  const expStr = String(exp).split('').map(c => supers[c] || c).join('');
+  return `${mant.toFixed(2)}×10${expStr} ${unit}`;
+}
+
+function updateMassPhysics(sliderVal) {
+  // slider 1-100 maps log-scale to mass in solar masses, 1e5 to 1e7 M_sun
+  const t = (sliderVal - 1) / 99;
+  const massSolar = Math.pow(10, 5 + t * 2); // 1e5 .. 1e7
+  const massLabel = massSolar >= 1e6
+    ? (massSolar/1e6).toFixed(2) + 'M☉×10⁶'
+    : (massSolar/1e5).toFixed(2) + 'M☉×10⁵';
+  massValLabel.textContent = massLabel;
+  massFill.style.width = sliderVal + '%';
+
+  // Real formulas (SI), same constants used to verify telemetry earlier
+  const G = 6.674e-11, c = 2.998e8, Msun = 1.989e30, hbar = 1.0546e-34, kB = 1.381e-23;
+  const M = massSolar * Msun;
+  const rs_m = 2 * G * M / (c*c);       // Schwarzschild radius (m)
+  const rs_km = rs_m / 1000;
+  const T_hawking = (hbar * c*c*c) / (8 * Math.PI * G * M * kB); // Hawking temperature (K)
+
+  mRsDom.textContent = formatSci(rs_km, 'km');
+  mHtDom.textContent = formatSci(T_hawking, 'K');
+  // photon sphere is always 1.5 r_s regardless of mass — label stays the same, but we
+  // recompute the actual scene-unit radius so the visual ring scales with the slider too
+  CFG.rsScale = rs_km / 2953845.15; // ratio relative to the default 1e6 M_sun baseline shown originally
+  if (typeof updatePhotonSphereScale === 'function') updatePhotonSphereScale(CFG.rsScale);
+}
+
+massSlider.addEventListener('input', () => updateMassPhysics(parseFloat(massSlider.value)));
+updateMassPhysics(parseFloat(massSlider.value)); // initialize on load
+
+// ─── UI: CLICK-TO-INFO ON TELEMETRY CARDS ───────────────────────────────────
+const infoPopover = document.getElementById('info-popover');
+const infoBackdrop = document.getElementById('info-backdrop');
+const infoTitle = document.getElementById('info-popover-title');
+const infoBody = document.getElementById('info-popover-body');
+
+function showInfo(title, text) {
+  infoTitle.textContent = title;
+  infoBody.textContent = text;
+  infoPopover.classList.add('visible');
+  infoBackdrop.classList.add('visible');
+}
+function hideInfo() {
+  infoPopover.classList.remove('visible');
+  infoBackdrop.classList.remove('visible');
+}
+document.querySelectorAll('.info-card').forEach(card => {
+  card.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const label = card.querySelector('.metric-label').textContent;
+    const info = card.dataset.info;
+    showInfo(label, info);
+  });
+});
+infoBackdrop.addEventListener('click', hideInfo);
+infoPopover.addEventListener('click', hideInfo);
+
+// ─── UI: OVERLAY TOGGLES ─────────────────────────────────────────────────────
+function bindOverlay(rowId, key, target) {
+  const row = document.getElementById(rowId);
+  row.addEventListener('click', () => {
+    CFG[key] = !CFG[key];
+    target.visible = CFG[key];
+    row.classList.toggle('active', CFG[key]);
+  });
+}
+bindOverlay('btn-grid','showGrid',gridGroup);
+bindOverlay('btn-lens','showLens',lensingGroup);
+bindOverlay('btn-jets','showJets',jetsGroup);
+bindOverlay('btn-hawking','showHawking',hawkingPts);
+
+// ─── UI: CAMERA PRESETS ──────────────────────────────────────────────────────
+let autoOrbitActive = false;
+let camTween = null; // {fromPhi, toPhi, fromTheta, toTheta, start, duration}
+
+function tweenCameraTo(targetPhi, targetTheta) {
+  camTween = {
+    fromPhi: camPhi, toPhi: targetPhi,
+    fromTheta: camTheta, toTheta: targetTheta,
+    start: performance.now(), duration: 900,
+  };
+}
+
+document.getElementById('btn-cam-top').addEventListener('click', () => {
+  autoOrbitActive = false;
+  document.getElementById('btn-cam-orbit').classList.remove('active');
+  tweenCameraTo(0.15, camTheta); // near-vertical, top-down
+});
+document.getElementById('btn-cam-edge').addEventListener('click', () => {
+  autoOrbitActive = false;
+  document.getElementById('btn-cam-orbit').classList.remove('active');
+  tweenCameraTo(1.5, camTheta); // close to equatorial plane, edge-on
+});
+document.getElementById('btn-cam-orbit').addEventListener('click', (e) => {
+  autoOrbitActive = !autoOrbitActive;
+  e.currentTarget.classList.toggle('active', autoOrbitActive);
+});
+
+// The embedding funnel is a standalone side-view diagram, not a layer that
+// composites with the 3D black hole scene — showing both at once is what made
+// it look "broken" (the disk and horizon sphere visually buried it). Toggling
+// it now swaps the main scene out and frames the camera on the diagram instead.
+const btnFunnelRow = document.getElementById('btn-funnel');
+let preFunnelCamR = camR, preFunnelPhi = camPhi, preFunnelTheta = camTheta;
+btnFunnelRow.addEventListener('click', () => {
+  CFG.showFunnel = !CFG.showFunnel;
+  btnFunnelRow.classList.toggle('active', CFG.showFunnel);
+  funnelGroup.visible = CFG.showFunnel;
+
+  horizon.visible = !CFG.showFunnel;
+  coronaMesh.visible = !CFG.showFunnel;
+  glowRing1.visible = !CFG.showFunnel;
+  diskGroup.visible = !CFG.showFunnel;
+  gridGroup.visible = !CFG.showFunnel && CFG.showGrid;
+  lensingGroup.visible = !CFG.showFunnel && CFG.showLens;
+  jetsGroup.visible = !CFG.showFunnel && CFG.showJets;
+  hawkingPts.visible = !CFG.showFunnel && CFG.showHawking;
+
+  if (CFG.showFunnel) {
+    preFunnelCamR = camR; preFunnelPhi = camPhi; preFunnelTheta = camTheta;
+    autoOrbitActive = false;
+    document.getElementById('btn-cam-orbit').classList.remove('active');
+    // A grazing, near-equatorial view shows the true side-on silhouette of the
+    // bowl — throat far/up, rim near/down — which is the correct, unambiguous
+    // read. (A steep overhead angle was tried and made it look inverted instead:
+    // looking straight down the throat, perspective makes the far rim of the
+    // opening appear to flare outward as it descends, the opposite of the
+    // intended look.)
+    camR = 42;
+    funnelLookY = 0;
+    tweenCameraTo(1.3, camTheta);
+  } else {
+    camR = preFunnelCamR;
+    funnelLookY = -2;
+    tweenCameraTo(preFunnelPhi, preFunnelTheta);
+  }
+});
+
+// ─── UI: DROP OBJECT ─────────────────────────────────────────────────────────
+document.getElementById('btn-drop').addEventListener('click', () => {
+  const RS_SCENE = 3.5;
+
+  // Glowing tip (the leading, densest end falling toward the hole).
+  const tipGeo = new THREE.SphereGeometry(0.16, 10, 10);
+  const tipMat = new THREE.MeshBasicMaterial({ color: 0xfff2e0, transparent: true, opacity: 1, blending: THREE.AdditiveBlending, depthWrite: false });
+  const tip = new THREE.Mesh(tipGeo, tipMat);
+  scene.add(tip);
+
+  // Curved strand: rebuilt each frame as a tube following the object's actual recent
+  // spiral path, so the spaghettified strand curves with the orbit instead of being
+  // a rigid straight segment.
+  let strandMesh = null;
+  const strandMat = new THREE.MeshBasicMaterial({
+    color: 0xffffff, transparent: true, opacity: 1,
+    blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide,
+  });
+
+  // Trailing debris stream further behind the strand for extra "torn apart" texture.
+  const trailCount = 28;
+  const trailGeo = new THREE.BufferGeometry();
+  const trailPos = new Float32Array(trailCount * 3);
+  const trailGeoAttr = new THREE.BufferAttribute(trailPos, 3);
+  trailGeo.setAttribute('position', trailGeoAttr);
+  const trailMat = new THREE.PointsMaterial({
+    color: 0xffd9a0, size: 0.09, transparent: true, opacity: 0.55,
+    blending: THREE.AdditiveBlending, depthWrite: false,
+  });
+  const trail = new THREE.Points(trailGeo, trailMat);
+  scene.add(trail);
+
+  const pathHistory = []; // recent positions tracing the true curved infall path, oldest first
+  const HISTORY_LEN = 40;
+
+  let angle = Math.random()*Math.PI*2, radius = 20;
+  const startTime = performance.now();
+
+  // Funnel-frame helpers (mirrors buildSpacetimeFunnel constants)
+  const FUNNEL_RS = 3.5, FUNNEL_R_OUT = 26, FUNNEL_DEPTH_SCALE = 0.55, FUNNEL_Y_OFFSET = 6;
+  function funnelDepthAt(r) {
+    const rc = Math.max(r, FUNNEL_RS);
+    return 2 * Math.sqrt(FUNNEL_RS * (rc - FUNNEL_RS)) * FUNNEL_DEPTH_SCALE;
+  }
+  const funnelMaxDepth = funnelDepthAt(FUNNEL_R_OUT);
+  function getFunnelPos(r, a) {
+    // map r to funnel surface: throat is deepest, rim is at y=FUNNEL_Y_OFFSET
+    const y = FUNNEL_Y_OFFSET + (funnelDepthAt(r) - funnelMaxDepth);
+    return new THREE.Vector3(Math.cos(a) * r, y, Math.sin(a) * r);
+  }
+
+  function spiralIn() {
+    const t2 = Math.min(1, (performance.now()-startTime)/4000);
+    radius = 20*(1-t2*0.98); angle += 0.1+t2*0.1;
+    let pos, activeRadius;
+    if (CFG.showFunnel) {
+      // In funnel mode: drop radially inward along the paraboloid surface.
+      // Keep angle fixed (straight spoke) so the path is clearly visible on the diagram.
+      activeRadius = FUNNEL_RS + (FUNNEL_R_OUT - FUNNEL_RS) * (1 - t2);
+      pos = getFunnelPos(activeRadius, angle);
+    } else {
+      activeRadius = radius;
+      pos = new THREE.Vector3(Math.cos(angle)*radius, 0.3*(1-t2), Math.sin(angle)*radius);
+    }
+    tip.position.copy(pos);
+
+    // Tidal force ~ 1/r^3: grows sharply as radius approaches r_s.
+    const proximity = Math.max(0, 1 - (activeRadius - RS_SCENE) / (20 - RS_SCENE)); // 0 far away, 1 at horizon
+    const stretchLen = 0.6 + Math.pow(proximity, 4) * 9; // how far back along the path the strand reaches
+    const tidalSquish = Math.max(0.035, 0.16 / Math.sqrt(1 + stretchLen)); // thinner as it stretches
+
+    // Track the real path so the strand can curve along actual recent motion, not a straight guess.
+    pathHistory.push(pos.clone());
+    if (pathHistory.length > HISTORY_LEN) pathHistory.shift();
+
+    // Pick enough recent path points to span roughly `stretchLen` of arc length behind the tip.
+    let accLen = 0, sliceStart = pathHistory.length - 1;
+    for (let i = pathHistory.length - 1; i > 0; i--) {
+      accLen += pathHistory[i].distanceTo(pathHistory[i-1]);
+      sliceStart = i - 1;
+      if (accLen >= stretchLen) break;
+    }
+    const curvePoints = pathHistory.slice(Math.max(0, sliceStart));
+
+    if (strandMesh) { scene.remove(strandMesh); strandMesh.geometry.dispose(); }
+    if (curvePoints.length >= 2) {
+      const curve = new THREE.CatmullRomCurve3(curvePoints);
+      const tubularSegments = Math.max(6, curvePoints.length * 2);
+      const tubeGeo = new THREE.TubeGeometry(curve, tubularSegments, tidalSquish, 8, false);
+      strandMesh = new THREE.Mesh(tubeGeo, strandMat);
+      scene.add(strandMesh);
+    }
+
+    // Brighten and redden as it nears the horizon (matter heating up under tidal stress).
+    const heat = Math.min(1, proximity * 1.3);
+    strandMat.color.setRGB(1.0, 1.0 - heat*0.55, 1.0 - heat*0.85);
+    tip.material.color.setRGB(1.0, 0.95 - heat*0.5, 0.85 - heat*0.8);
+
+    // Fade only at the very end (after crossing the horizon), not throughout the fall.
+    const fadeOut = activeRadius < RS_SCENE * 1.05 ? Math.max(0, (activeRadius - RS_SCENE*0.3) / (RS_SCENE*0.75)) : 1;
+    strandMat.opacity = fadeOut;
+    tip.material.opacity = fadeOut;
+
+    // Update trailing debris stream (further back than the strand, for extra texture).
+    for (let i = 0; i < trailCount; i++) {
+      const idx = pathHistory.length - 1 - i;
+      const p = pathHistory[idx] || pos;
+      trailPos[i*3] = p.x; trailPos[i*3+1] = p.y; trailPos[i*3+2] = p.z;
+    }
+    trailGeoAttr.needsUpdate = true;
+    trail.material.opacity = 0.45 * fadeOut;
+
+    if (t2 < 1) {
+      requestAnimationFrame(spiralIn);
+    } else {
+      if (strandMesh) { scene.remove(strandMesh); strandMesh.geometry.dispose(); }
+      scene.remove(tip); scene.remove(trail);
+    }
+  }
+  spiralIn();
+});
+
+// ─── SPAGHETTIFY A FILE ──────────────────────────────────────────────────────
+// Any uploaded file is visually dropped into the hole using the same proven
+// curved-infall + tidal-strand technique as the object-drop feature above.
+// What comes back out is NOT a decoded/recovered version of the file — it's
+// freshly generated random bytes of the exact same byte length, standing in for
+// "information that fell past the horizon, scrambled beyond recovery."
+(() => {
+  const fileInput = document.getElementById('file-input');
+  const btnFile = document.getElementById('btn-file');
+  const statusEl = document.getElementById('file-status');
+
+  btnFile.addEventListener('click', () => fileInput.click());
+
+  fileInput.addEventListener('change', () => {
+    const file = fileInput.files && fileInput.files[0];
+    if (!file) return;
+    runFileTDE(file);
+    fileInput.value = ''; // allow re-selecting the same file later
+  });
+
+  function formatBytes(n) {
+    if (n < 1024) return n + ' B';
+    if (n < 1024*1024) return (n/1024).toFixed(1) + ' KB';
+    if (n < 1024*1024*1024) return (n/(1024*1024)).toFixed(1) + ' MB';
+    return (n/(1024*1024*1024)).toFixed(2) + ' GB';
+  }
+
+  function runFileTDE(file) {
+    btnFile.disabled = true;
+    statusEl.classList.add('active');
+    statusEl.textContent = `Reading ${file.name} (${formatBytes(file.size)})…`;
+
+    const RS_SCENE = 3.5;
+
+    // Reuse the exact visual language of "Drop Object": glowing tip + curved
+    // tidal strand rebuilt each frame from real path history, plus a trailing
+    // debris-stream of points so a file-drop reads the same as a normal object-drop.
+    const tipGeo = new THREE.SphereGeometry(0.18, 10, 10);
+    const tipMat = new THREE.MeshBasicMaterial({ color: 0xbfffe9, transparent: true, opacity: 1, blending: THREE.AdditiveBlending, depthWrite: false });
+    const tip = new THREE.Mesh(tipGeo, tipMat);
+    scene.add(tip);
+
+    let strandMesh = null;
+    const strandMat = new THREE.MeshBasicMaterial({
+      color: 0x9bffe0, transparent: true, opacity: 1,
+      blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide,
+    });
+
+    const trailCount = 28;
+    const trailGeo = new THREE.BufferGeometry();
+    const trailPos = new Float32Array(trailCount * 3);
+    trailGeo.setAttribute('position', new THREE.BufferAttribute(trailPos, 3));
+    const trailMat = new THREE.PointsMaterial({
+      color: 0x6cf5d4, size: 0.09, transparent: true, opacity: 0.55,
+      blending: THREE.AdditiveBlending, depthWrite: false,
+    });
+    const trail = new THREE.Points(trailGeo, trailMat);
+    scene.add(trail);
+
+    const pathHistory = [];
+    const HISTORY_LEN = 40;
+    let angle = Math.random()*Math.PI*2, radius = 20;
+    const startTime = performance.now();
+    const DURATION = 4200;
+
+    // Funnel-frame helpers (mirrors buildSpacetimeFunnel constants)
+    const FILE_FUNNEL_RS = 3.5, FILE_FUNNEL_R_OUT = 26, FILE_FUNNEL_DEPTH_SCALE = 0.55, FILE_FUNNEL_Y_OFFSET = 6;
+    function fileFunnelDepthAt(r) {
+      const rc = Math.max(r, FILE_FUNNEL_RS);
+      return 2 * Math.sqrt(FILE_FUNNEL_RS * (rc - FILE_FUNNEL_RS)) * FILE_FUNNEL_DEPTH_SCALE;
+    }
+    const fileFunnelMaxDepth = fileFunnelDepthAt(FILE_FUNNEL_R_OUT);
+    function getFileFunnelPos(r, a) {
+      const y = FILE_FUNNEL_Y_OFFSET + (fileFunnelDepthAt(r) - fileFunnelMaxDepth);
+      return new THREE.Vector3(Math.cos(a) * r, y, Math.sin(a) * r);
+    }
+
+    function spiralInFile() {
+      const t2 = Math.min(1, (performance.now()-startTime)/DURATION);
+      radius = 20*(1-t2*0.98); angle += 0.1+t2*0.1;
+      let pos, activeRadius;
+      if (CFG.showFunnel) {
+        activeRadius = FILE_FUNNEL_RS + (FILE_FUNNEL_R_OUT - FILE_FUNNEL_RS) * (1 - t2);
+        pos = getFileFunnelPos(activeRadius, angle);
+      } else {
+        activeRadius = radius;
+        pos = new THREE.Vector3(Math.cos(angle)*radius, 0.3*(1-t2), Math.sin(angle)*radius);
+      }
+      tip.position.copy(pos);
+
+      const proximity = Math.max(0, 1 - (activeRadius - RS_SCENE) / (20 - RS_SCENE));
+      const stretchLen = 0.6 + Math.pow(proximity, 4) * 9;
+      const tidalSquish = Math.max(0.035, 0.16 / Math.sqrt(1 + stretchLen));
+
+      pathHistory.push(pos.clone());
+      if (pathHistory.length > HISTORY_LEN) pathHistory.shift();
+
+      let accLen = 0, sliceStart = pathHistory.length - 1;
+      for (let i = pathHistory.length - 1; i > 0; i--) {
+        accLen += pathHistory[i].distanceTo(pathHistory[i-1]);
+        sliceStart = i - 1;
+        if (accLen >= stretchLen) break;
+      }
+      const curvePoints = pathHistory.slice(Math.max(0, sliceStart));
+
+      if (strandMesh) { scene.remove(strandMesh); strandMesh.geometry.dispose(); }
+      if (curvePoints.length >= 2) {
+        const curve = new THREE.CatmullRomCurve3(curvePoints);
+        const tubularSegments = Math.max(6, curvePoints.length * 2);
+        const tubeGeo = new THREE.TubeGeometry(curve, tubularSegments, tidalSquish, 8, false);
+        strandMesh = new THREE.Mesh(tubeGeo, strandMat);
+        scene.add(strandMesh);
+      }
+
+      const heat = Math.min(1, proximity * 1.3);
+      strandMat.color.setRGB(1.0 - heat*0.4, 1.0, 0.85 + heat*0.15);
+      tip.material.color.setRGB(0.75+heat*0.25, 1.0, 0.92);
+
+      const fadeOut = activeRadius < RS_SCENE*1.05 ? Math.max(0, (activeRadius - RS_SCENE*0.3)/(RS_SCENE*0.75)) : 1;
+      strandMat.opacity = fadeOut;
+      tip.material.opacity = fadeOut;
+
+      for (let i = 0; i < trailCount; i++) {
+        const idx = pathHistory.length - 1 - i;
+        const p = pathHistory[idx] || pos;
+        trailPos[i*3] = p.x; trailPos[i*3+1] = p.y; trailPos[i*3+2] = p.z;
+      }
+      trailGeo.attributes.position.needsUpdate = true;
+      trail.material.opacity = 0.55 * fadeOut;
+
+      statusEl.textContent = `Spaghettifying… ${Math.round(t2*100)}%`;
+
+      if (t2 < 1) {
+        requestAnimationFrame(spiralInFile);
+      } else {
+        if (strandMesh) { scene.remove(strandMesh); strandMesh.geometry.dispose(); }
+        scene.remove(tip); scene.remove(trail);
+        emitHawkingBurst(); // small particle burst standing in for "radiated back out"
+        scrambleFile(file);
+      }
+    }
+    spiralInFile();
+  }
+
+  // Small one-off burst of bright points right at the horizon, distinct from the
+  // persistent Hawking-radiation toggle elsewhere in the sim — this is just a
+  // visual beat marking the moment the scrambled file "re-emerges."
+  function emitHawkingBurst() {
+    const count = 60;
+    const geo = new THREE.BufferGeometry();
+    const pos = new Float32Array(count*3);
+    const vel = [];
+    for (let i = 0; i < count; i++) {
+      const th = Math.random()*Math.PI*2, ph = Math.acos(2*Math.random()-1);
+      pos[i*3] = 3.6*Math.sin(ph)*Math.cos(th);
+      pos[i*3+1] = 3.6*Math.sin(ph)*Math.sin(th);
+      pos[i*3+2] = 3.6*Math.cos(ph);
+      vel.push(new THREE.Vector3(pos[i*3],pos[i*3+1],pos[i*3+2]).normalize().multiplyScalar(0.04+Math.random()*0.06));
+    }
+    geo.setAttribute('position', new THREE.BufferAttribute(pos,3));
+    const mat = new THREE.PointsMaterial({ color: 0x8cffe6, size: 0.07, transparent: true, opacity: 1, blending: THREE.AdditiveBlending, depthWrite: false });
+    const pts = new THREE.Points(geo, mat);
+    scene.add(pts);
+    const start = performance.now();
+    function step() {
+      const e = (performance.now()-start)/1600;
+      for (let i=0;i<count;i++) {
+        pos[i*3]+=vel[i].x; pos[i*3+1]+=vel[i].y; pos[i*3+2]+=vel[i].z;
+      }
+      geo.attributes.position.needsUpdate = true;
+      mat.opacity = Math.max(0, 1-e);
+      if (e < 1) requestAnimationFrame(step);
+      else { scene.remove(pts); geo.dispose(); mat.dispose(); }
+    }
+    step();
+  }
+
+  // Generate a same-size, cryptographically random byte buffer standing in for
+  // the original file's content. This is NOT a transformation/encoding of the
+  // input — the original bytes are never inspected beyond their length, so there
+  // is no way to recover the source from the output. Pure noise, same size.
+  function scrambleFile(file) {
+    statusEl.textContent = `Reconstituting ${formatBytes(file.size)} of noise…`;
+    const size = file.size;
+    const CHUNK = 65536; // crypto.getRandomValues max per call
+    const out = new Uint8Array(size);
+    let offset = 0;
+    function fillChunk() {
+      const len = Math.min(CHUNK, size - offset);
+      if (len > 0) {
+        const view = new Uint8Array(len);
+        crypto.getRandomValues(view);
+        out.set(view, offset);
+        offset += len;
+      }
+      if (offset < size) {
+        requestAnimationFrame(fillChunk);
+      } else {
+        finish();
+      }
+    }
+    function finish() {
+      const blob = new Blob([out], { type: 'application/octet-stream' });
+      const url = URL.createObjectURL(blob);
+      const dotIdx = file.name.lastIndexOf('.');
+      const base = dotIdx > 0 ? file.name.slice(0, dotIdx) : file.name;
+      const outName = `${base}.scrambled.bin`;
+      statusEl.innerHTML = `Done — <a href="${url}" download="${outName}">download ${formatBytes(size)} of pure noise</a>`;
+      btnFile.disabled = false;
+    }
+    if (size === 0) { finish(); } else { fillChunk(); }
+  }
+})();
+
+// ─── TIDAL DISRUPTION EVENT ──────────────────────────────────────────────────
+document.getElementById('btn-tde').addEventListener('click', () => {
+  const RS_SCENE = 3.5;
+  const R_TIDAL = RS_SCENE * 4; // real TDEs disrupt the star a few r_s out, well before the horizon
+  const STAR_RADIUS = 1.1; // visible "sun" size before disruption
+
+  // ── The star itself: smooth glowing sphere, no surface texture ──
+  // Pure continuous brightness falloff — no noise, no granulation, no sunspots.
+  const starGeo = new THREE.SphereGeometry(STAR_RADIUS, 64, 64);
+  const starMat = new THREE.ShaderMaterial({
+    uniforms: { time: { value: 0 } },
+    vertexShader: `varying vec3 vNormal;
+      void main() { vNormal = normalize(normalMatrix * normal);
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+    fragmentShader: `
+      uniform float time; varying vec3 vNormal;
+      void main() {
+        float facing = clamp(abs(dot(vNormal, vec3(0.0,0.0,1.0))), 0.0, 1.0);
+        // Single continuous falloff: center fully blown-out white, edge warms gently.
+        float darken = pow(facing, 0.22);
+        vec3 hot  = vec3(1.05, 1.03, 1.0);
+        vec3 edge = vec3(1.0, 0.62, 0.30);
+        vec3 col = mix(edge, hot, darken);
+        // Tiny breathing flicker, subtle enough not to look animated/fake.
+        col *= 1.0 + 0.015*sin(time*0.6);
+        gl_FragColor = vec4(col, 1.0);
+      }`,
+  });
+  const star = new THREE.Mesh(starGeo, starMat);
+  scene.add(star);
+
+  // ── Two-layer glow: a tight hot inner halo + a wide soft outer corona, each built
+  // from a noise-perturbed radial falloff so the corona isn't perfectly circular/synthetic. ──
+  function buildGlowTexture(innerColor, midColor, outerAlphaPow, noiseAmount) {
+    const size = 512;
+    const canvas = document.createElement('canvas');
+    canvas.width = canvas.height = size;
+    const ctx = canvas.getContext('2d');
+    const cx = size/2, cy = size/2;
+    const img = ctx.createImageData(size, size);
+    for (let y = 0; y < size; y++) {
+      for (let x = 0; x < size; x++) {
+        const dx = (x-cx)/cx, dy = (y-cy)/cy;
+        let r = Math.sqrt(dx*dx+dy*dy);
+        // Light angular noise so the corona edge isn't a perfect circle.
+        const ang = Math.atan2(dy,dx);
+        const wobble = 1.0 + noiseAmount * Math.sin(ang*5.0 + Math.sin(ang*2.3)*2.0) * 0.08;
+        r *= wobble;
+        r = Math.min(r, 1.0);
+        const falloff = Math.pow(Math.max(0, 1 - r), outerAlphaPow);
+        const idx = (y*size+x)*4;
+        const t = Math.min(1, r*1.4);
+        const cr = innerColor[0]*(1-t) + midColor[0]*t;
+        const cg = innerColor[1]*(1-t) + midColor[1]*t;
+        const cb = innerColor[2]*(1-t) + midColor[2]*t;
+        img.data[idx] = cr; img.data[idx+1] = cg; img.data[idx+2] = cb;
+        img.data[idx+3] = Math.round(255*falloff);
+      }
+    }
+    ctx.putImageData(img, 0, 0);
+    return new THREE.CanvasTexture(canvas);
+  }
+
+  const innerGlowTex = buildGlowTexture([255,253,245],[255,225,160], 2.0, 0.0);
+  const outerGlowTex = buildGlowTexture([255,235,190],[255,140,60], 3.4, 0.0);
+
+  const innerGlowMat = new THREE.SpriteMaterial({
+    map: innerGlowTex, color: 0xffffff, transparent: true, opacity: 0.95,
+    blending: THREE.AdditiveBlending, depthWrite: false,
+  });
+  const innerGlow = new THREE.Sprite(innerGlowMat);
+  innerGlow.scale.setScalar(STAR_RADIUS * 3.2);
+  scene.add(innerGlow);
+
+  const glowSpriteMat = new THREE.SpriteMaterial({
+    map: outerGlowTex, color: 0xffffff, transparent: true, opacity: 0.75,
+    blending: THREE.AdditiveBlending, depthWrite: false,
+  });
+  const glowSprite = new THREE.Sprite(glowSpriteMat);
+  glowSprite.scale.setScalar(STAR_RADIUS * 8.5);
+  scene.add(glowSprite);
+
+  // ── Curved tidal strand: rebuilt each frame from path history, same proven technique
+  // as the single-object drop feature, but representing the star's own stretched material. ──
+  let strandMesh = null;
+  const strandMat = new THREE.MeshBasicMaterial({
+    color: 0xffcf8a, transparent: true, opacity: 0,
+    blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide,
+  });
+
+  const pathHistory = [];
+  const HISTORY_LEN = 50;
+
+  // Approach: near-parabolic infall from far away, on a fixed orbital plane with some tilt.
+  const approachAngle = Math.random() * Math.PI * 2;
+  let angle = approachAngle;
+  let radius = 34;
+  const startTime = performance.now();
+  const DURATION = 7000;
+
+  // Funnel-frame helpers for TDE (mirrors buildSpacetimeFunnel constants)
+  const TDE_FUNNEL_RS = 3.5, TDE_FUNNEL_R_OUT = 26, TDE_FUNNEL_DEPTH_SCALE = 0.55, TDE_FUNNEL_Y_OFFSET = 6;
+  function tdeFunnelDepthAt(r) {
+    const rc = Math.max(r, TDE_FUNNEL_RS);
+    return 2 * Math.sqrt(TDE_FUNNEL_RS * (rc - TDE_FUNNEL_RS)) * TDE_FUNNEL_DEPTH_SCALE;
+  }
+  const tdeFunnelMaxDepth = tdeFunnelDepthAt(TDE_FUNNEL_R_OUT);
+  function getTdeFunnelPos(r, a) {
+    const y = TDE_FUNNEL_Y_OFFSET + (tdeFunnelDepthAt(r) - tdeFunnelMaxDepth);
+    return new THREE.Vector3(Math.cos(a) * r, y, Math.sin(a) * r);
+  }
+
+  function animateTDE() {
+    const elapsed = performance.now() - startTime;
+    const p = Math.min(1, elapsed / DURATION);
+
+    // Curved infall path (same spiral form already proven for the drop-object feature),
+    // slower start, accelerating in — gives the star a real curved trajectory to spaghettify along.
+    radius = 34 * (1 - Math.pow(p, 1.7) * 0.97) + RS_SCENE * 0.5;
+    angle += 0.035 + p * 0.05;
+    let pos, activeRadius;
+    if (CFG.showFunnel) {
+      // In funnel mode: slide the star radially inward along the paraboloid surface.
+      activeRadius = TDE_FUNNEL_RS + (TDE_FUNNEL_R_OUT - TDE_FUNNEL_RS) * Math.max(0, 1 - Math.pow(p, 1.7) * 0.97);
+      pos = getTdeFunnelPos(activeRadius, angle);
+    } else {
+      activeRadius = radius;
+      pos = new THREE.Vector3(Math.cos(angle) * radius, 0.4 * (1 - p) * Math.sin(p * 3.0), Math.sin(angle) * radius);
+    }
+
+    star.position.copy(pos);
+    glowSprite.position.copy(pos);
+    innerGlow.position.copy(pos);
+    star.rotation.y += 0.04; // visible spin, independent of orbital motion
+    star.material.uniforms.time.value = elapsed * 0.001;
+
+    // Gentle flicker on the glow/corona so the sun feels like a live light source,
+    // not a static painted sphere.
+    const flicker = 1.0 + 0.06 * Math.sin(elapsed * 0.011) + 0.03 * Math.sin(elapsed * 0.037);
+    glowSprite.material.opacity = 0.75 * flicker;
+    innerGlow.material.opacity = 0.95 * flicker;
+
+    pathHistory.push(pos.clone());
+    if (pathHistory.length > HISTORY_LEN) pathHistory.shift();
+
+    // Tidal proximity: 0 far away, 1 once deep past the tidal radius.
+    const proximity = Math.max(0, Math.min(1, 1 - (activeRadius - RS_SCENE) / (R_TIDAL - RS_SCENE)));
+    const disrupted = activeRadius <= R_TIDAL;
+
+    if (disrupted) {
+      // The star itself shrinks as it converts into stream material — its remaining
+      // "core" gets smaller while the trailing strand (built below) grows to compensate.
+      const coreShrink = Math.max(0.15, 1 - proximity * 0.85);
+      star.scale.setScalar(coreShrink);
+      glowSprite.scale.setScalar(STAR_RADIUS * 8.5 * coreShrink);
+      innerGlow.scale.setScalar(STAR_RADIUS * 3.2 * coreShrink);
+
+      const stretchLen = 1.0 + Math.pow(proximity, 3) * 11; // how far back along the path the strand reaches
+      const tidalSquish = Math.max(0.05, STAR_RADIUS * coreShrink * 0.55 / Math.sqrt(1 + stretchLen));
+
+      // Pick recent path points spanning roughly `stretchLen` of arc length behind the star —
+      // this is what makes the strand curve along the true trajectory instead of a straight guess.
+      let accLen = 0, sliceStart = pathHistory.length - 1;
+      for (let i = pathHistory.length - 1; i > 0; i--) {
+        accLen += pathHistory[i].distanceTo(pathHistory[i - 1]);
+        sliceStart = i - 1;
+        if (accLen >= stretchLen) break;
+      }
+      const curvePoints = pathHistory.slice(Math.max(0, sliceStart));
+
+      if (strandMesh) { scene.remove(strandMesh); strandMesh.geometry.dispose(); }
+      if (curvePoints.length >= 2) {
+        const curve = new THREE.CatmullRomCurve3(curvePoints);
+        const tubularSegments = Math.max(8, curvePoints.length * 2);
+        const tubeGeo = new THREE.TubeGeometry(curve, tubularSegments, tidalSquish, 8, false);
+        strandMesh = new THREE.Mesh(tubeGeo, strandMat);
+        scene.add(strandMesh);
+      }
+      strandMat.opacity = Math.min(0.85, proximity * 1.1);
+      // heat shift: stream brightens toward white-hot near the hole
+      strandMat.color.setRGB(1.0, 0.95 - proximity * 0.25, 0.55 - proximity * 0.4);
+    }
+
+    // Fade everything out right at the very end (after deep infall).
+    const fadeOut = p > 0.92 ? Math.max(0, 1 - (p - 0.92) / 0.08) : 1;
+    star.visible = fadeOut > 0.02;
+    glowSprite.material.opacity *= fadeOut;
+    innerGlow.material.opacity *= fadeOut;
+    if (strandMesh) strandMat.opacity *= fadeOut;
+
+    if (p < 1) {
+      requestAnimationFrame(animateTDE);
+    } else {
+      scene.remove(star);
+      scene.remove(glowSprite); glowSprite.material.dispose();
+      scene.remove(innerGlow); innerGlow.material.dispose();
+      if (strandMesh) { scene.remove(strandMesh); strandMesh.geometry.dispose(); }
+    }
+  }
+  animateTDE();
+});
+
+// ─── ANIMATION ───────────────────────────────────────────────────────────────
+let t=0, frameCount=0, lastFPS=performance.now();
+const fpsDom = document.getElementById('m-fps');
+
+function animate() {
+  requestAnimationFrame(animate);
+  t += 0.016; frameCount++;
+  if(performance.now()-lastFPS > 800) {
+    fpsDom.textContent = (frameCount/((performance.now()-lastFPS)/1000)).toFixed(0)+' fps';
+    frameCount=0; lastFPS=performance.now();
+  }
+  // Smooth camera preset tween
+  if (camTween) {
+    const elapsed = performance.now() - camTween.start;
+    const p = Math.min(1, elapsed / camTween.duration);
+    const ease = p < 0.5 ? 2*p*p : 1 - Math.pow(-2*p+2, 2)/2; // ease-in-out
+    camPhi = camTween.fromPhi + (camTween.toPhi - camTween.fromPhi) * ease;
+    if (p >= 1) camTween = null;
+  }
+  // Auto-orbit: slowly rotate theta when active and not manually dragging
+  if (autoOrbitActive && !isDragging) {
+    camTheta += 0.0035;
+  }
+  camera.position.x = camR*Math.sin(camPhi)*Math.cos(camTheta);
+  camera.position.y = camR*Math.cos(camPhi);
+  camera.position.z = camR*Math.sin(camPhi)*Math.sin(camTheta);
+  camera.lookAt(0,funnelLookY,0);
+  const spinSpeed = CFG.spinSpeed*0.012;
+  diskGroup.children.forEach(child => {
+    if(child.userData.isDiskShader) {
+      child.material.uniforms.time.value = t;
+      child.material.uniforms.intensity.value = CFG.diskIntensity;
+    } else {
+      const r = child.userData.baseR || 1;
+      child.rotation.z += spinSpeed*Math.pow(r,-1.5)*0.7; // Keplerian: omega ∝ r^(-3/2)
+    }
+  });
+  gridGroup.children.forEach(l => { l.material.opacity = CFG.gridOpacity*0.22; });
+  coronaMesh.material.uniforms.time.value = t;
+  glowRing1.material.opacity = 0.45+0.10*Math.sin(t*2.1);
+  if(lensingGroup.visible) {
+    lensingGroup.children.forEach((r,i) => {
+      r.rotation.z += 0.003*(i%2===0?1:-1);
+      r.material.opacity = (0.18-i*0.03)*CFG.lensStrength;
+    });
+  }
+  if(hawkingPts.visible) {
+    const{pos,vel,life,count}=hawkingPts.userData;
+    for(let i=0;i<count;i++) {
+      life[i]+=0.008;
+      if(life[i]>1) {
+        const theta=Math.random()*Math.PI*2, phi=Math.acos(2*Math.random()-1), r=3.5+Math.random()*0.2;
+        pos[i*3]=r*Math.sin(phi)*Math.cos(theta); pos[i*3+1]=r*Math.sin(phi)*Math.sin(theta); pos[i*3+2]=r*Math.cos(phi);
+        life[i]=0; vel[i]=0.02+Math.random()*0.08;
+      } else {
+        const nx=pos[i*3],ny=pos[i*3+1],nz=pos[i*3+2];
+        const rr=Math.sqrt(nx*nx+ny*ny+nz*nz);
+        pos[i*3]+=(nx/rr)*vel[i]; pos[i*3+1]+=(ny/rr)*vel[i]; pos[i*3+2]+=(nz/rr)*vel[i];
+      }
+    }
+    hawkingPts.geometry.attributes.position.needsUpdate=true;
+    hawkingPts.geometry.attributes.life.needsUpdate=true;
+  }
+  if(jetsGroup.visible) {
+    const jetPts = jetsGroup.userData.jetParticles;
+    const { pos, vel, life, maxL, count: jCount } = jetPts.userData;
+    const RS_JET = 3.8;
+
+    // update shader time uniform
+    jetPts.material.uniforms.time.value = t;
+
+    for(let i = 0; i < jCount; i++) {
+      life[i] += 0.012;
+
+      if(life[i] >= maxL[i]) {
+        // respawn at base of jet
+        const sign   = (i % 2 === 0) ? 1 : -1;
+        const frac   = Math.random() * 0.08;         // spawn near base
+        const cone   = frac * frac * 1.2;
+        const angle  = Math.random() * Math.PI * 2;
+        pos[i*3]   = Math.cos(angle) * cone;
+        pos[i*3+1] = sign * (RS_JET + Math.random() * 1.5);
+        pos[i*3+2] = Math.sin(angle) * cone;
+
+        const speed = 0.22 + Math.random() * 0.38;
+        vel[i*3]   = (Math.random()-0.5)*0.012;
+        vel[i*3+1] = sign * speed;
+        vel[i*3+2] = (Math.random()-0.5)*0.012;
+        life[i]    = 0;
+        maxL[i]    = 0.6 + Math.random() * 0.4;
+      } else {
+        // move particle
+        pos[i*3]   += vel[i*3];
+        pos[i*3+1] += vel[i*3+1];
+        pos[i*3+2] += vel[i*3+2];
+        // slight lateral spread as it rises
+        vel[i*3]   *= 1.001;
+        vel[i*3+2] *= 1.001;
+      }
+    }
+    jetPts.geometry.attributes.position.needsUpdate = true;
+    jetPts.geometry.attributes.life.needsUpdate     = true;
+    jetPts.geometry.attributes.maxLife.needsUpdate  = true;
+  }
+  horizon.material.color.setHSL(0,0,0.002*Math.sin(t*5));
+  renderer.render(scene, camera);
+}
+animate();
+
+window.addEventListener('resize', () => {
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+});
+// Also fire on orientation change for mobile
+window.addEventListener('orientationchange', () => {
+  setTimeout(() => {
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+  }, 200);
+});
+</script>
+</body>
+</html>
