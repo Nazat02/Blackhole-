@@ -71,6 +71,11 @@ canvas {
   width: 100% !important;
   height: 100% !important;
 }
+#c2d {
+  display: none;
+  background: var(--void);
+  z-index: 1;
+}
 
 /* ── SCANLINES ── */
 .scanline {
@@ -1032,6 +1037,7 @@ input[type=range]::-moz-range-thumb {
 <div id="crosshair-dot"></div>
 
 <canvas id="c"></canvas>
+<canvas id="c2d"></canvas>
 
 <div id="info-backdrop"></div>
 <div id="info-popover">
@@ -1168,6 +1174,13 @@ input[type=range]::-moz-range-thumb {
             </div>
             <div class="toggle-pill"></div>
           </div>
+          <div class="overlay-row" id="btn-flat2d">
+            <div class="overlay-row-left">
+              <span class="overlay-icon">▦</span>
+              <div class="overlay-name">Flat 2D Diagram</div>
+            </div>
+            <div class="toggle-pill"></div>
+          </div>
         </div>
       </div>
     </div>
@@ -1300,6 +1313,65 @@ input[type=range]::-moz-range-thumb {
       </div>
     </div>
 
+    <!-- SECTION 3.6: Flat 2D Diagram Mode (own independent controls, only shown
+         while Flat 2D Diagram is active — a schematic, non-perspective view) -->
+    <div class="dock-section" id="sec-flat2d-wrap" style="display:none;">
+      <div class="section-trigger open" data-target="sec-flat2d">
+        <div class="section-left">
+          <div class="section-dot"></div>
+          <div class="section-title">Flat Diagram</div>
+        </div>
+        <div class="section-arrow"><svg viewBox="0 0 10 6"><polyline points="1,1 5,5 9,1"/></svg></div>
+      </div>
+      <div class="section-body open" id="sec-flat2d">
+        <div class="param-list">
+          <div class="param-row">
+            <div class="param-header">
+              <div class="param-name">Curvature Warp</div>
+              <div class="param-val" id="vl-2dwarp">65</div>
+            </div>
+            <div class="slider-track">
+              <div class="slider-bg"><div class="slider-fill" id="sf-2dwarp" style="width:65%"></div></div>
+              <input type="range" id="sl-2dwarp" min="0" max="100" value="65">
+            </div>
+          </div>
+          <div class="param-row">
+            <div class="param-header">
+              <div class="param-name">Rotation Speed</div>
+              <div class="param-val" id="vl-2dspin">35</div>
+            </div>
+            <div class="slider-track">
+              <div class="slider-bg"><div class="slider-fill" id="sf-2dspin" style="width:35%"></div></div>
+              <input type="range" id="sl-2dspin" min="0" max="100" value="35">
+            </div>
+          </div>
+        </div>
+        <div class="overlay-list" style="margin-top:10px;">
+          <div class="overlay-row active" id="btn-2d-grid">
+            <div class="overlay-row-left">
+              <span class="overlay-icon">⊞</span>
+              <div class="overlay-name">Warped Grid</div>
+            </div>
+            <div class="toggle-pill"></div>
+          </div>
+          <div class="overlay-row active" id="btn-2d-hawking">
+            <div class="overlay-row-left">
+              <span class="overlay-icon">✦</span>
+              <div class="overlay-name">Hawking Radiation</div>
+            </div>
+            <div class="toggle-pill"></div>
+          </div>
+          <div class="overlay-row active" id="btn-2d-jets">
+            <div class="overlay-row-left">
+              <span class="overlay-icon">⇅</span>
+              <div class="overlay-name">Relativistic Jets</div>
+            </div>
+            <div class="toggle-pill"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- SECTION 4: Camera Presets -->
     <div class="dock-section" id="sec-camera-wrap">
       <div class="section-trigger open" data-target="sec-camera">
@@ -1364,7 +1436,7 @@ input[type=range]::-moz-range-thumb {
 const CFG = {
   diskIntensity: 0.70, gridOpacity: 0.60,
   lensStrength: 0.55,  spinSpeed: 0.30,
-  showGrid: true, showLens: false, showJets: false, showHawking: false, showFunnel: false,
+  showGrid: true, showLens: false, showJets: false, showHawking: false, showFunnel: false, show2D: false,
 };
 
 // ─── SCENE ───────────────────────────────────────────────────────────────────
@@ -2351,6 +2423,12 @@ const secParamsWrap = document.getElementById('sec-params-wrap');
 const secFunnelModeWrap = document.getElementById('sec-funnel-mode-wrap');
 const funnelOnly3dRowIds = ['btn-grid', 'btn-lens', 'btn-jets', 'btn-hawking'];
 btnFunnelRow.addEventListener('click', () => {
+  // Funnel mode and Flat 2D mode are mutually exclusive alternate views —
+  // turning Funnel on while 2D is active cleanly exits 2D mode first.
+  if (!CFG.showFunnel && CFG.show2D) {
+    btnFlat2DRow.click();
+  }
+
   CFG.showFunnel = !CFG.showFunnel;
   btnFunnelRow.classList.toggle('active', CFG.showFunnel);
   funnelGroup.visible = CFG.showFunnel;
@@ -2395,6 +2473,453 @@ btnFunnelRow.addEventListener('click', () => {
   // 3D camera state (camR/camPhi/camTheta) is left completely untouched — it
   // will resume exactly where it was when the funnel mode is turned off.
 });
+
+// ─── FLAT 2D DIAGRAM MODE: toggle ────────────────────────────────────────────
+// A fully separate, non-perspective schematic render — flat orthographic-style
+// canvas drawing instead of the WebGL 3D scene or the 3D funnel wireframe.
+// Shows the same physical phenomena (warped spacetime, lensing halo, Hawking
+// radiation, jets) but as flat 2D vector diagrams, visually distinct from both
+// other modes — no perspective, no depth, no lighting, pure schematic lines.
+const canvas2d = document.getElementById('c2d');
+const ctx2d = canvas2d.getContext('2d');
+const btnFlat2DRow = document.getElementById('btn-flat2d');
+const secFlat2DWrap = document.getElementById('sec-flat2d-wrap');
+
+function resizeCanvas2D() {
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  canvas2d.width = window.innerWidth * dpr;
+  canvas2d.height = window.innerHeight * dpr;
+}
+resizeCanvas2D();
+window.addEventListener('resize', resizeCanvas2D);
+
+btnFlat2DRow.addEventListener('click', () => {
+  CFG.show2D = !CFG.show2D;
+  btnFlat2DRow.classList.toggle('active', CFG.show2D);
+
+  // Flat 2D mode and Funnel mode are mutually exclusive alternate views —
+  // turning one on always turns the other off first.
+  if (CFG.show2D && CFG.showFunnel) {
+    btnFunnelRow.click(); // cleanly unwinds all funnel-mode visibility/panel state
+  }
+
+  canvas.style.display = CFG.show2D ? 'none' : '';
+  canvas2d.style.display = CFG.show2D ? 'block' : 'none';
+
+  // Crosshair belongs to the 3D aiming reticle — irrelevant to a flat diagram.
+  document.getElementById('crosshair').style.display = CFG.show2D ? 'none' : (CFG.showFunnel ? 'none' : '');
+  document.getElementById('crosshair-dot').style.display = CFG.show2D ? 'none' : (CFG.showFunnel ? 'none' : '');
+
+  // Panel swap: hide every other mode's panel, show only Flat Diagram's.
+  secParamsWrap.style.display = CFG.show2D ? 'none' : (CFG.showFunnel ? 'none' : '');
+  document.getElementById('sec-camera-wrap').style.display = CFG.show2D ? 'none' : (CFG.showFunnel ? 'none' : '');
+  secFlat2DWrap.style.display = CFG.show2D ? '' : 'none';
+  funnelOnly3dRowIds.forEach(id => {
+    document.getElementById(id).style.display = CFG.show2D ? 'none' : (CFG.showFunnel ? 'none' : '');
+  });
+  btnFunnelRow.style.display = CFG.show2D ? 'none' : '';
+
+  if (CFG.show2D) {
+    autoOrbitActive = false;
+    document.getElementById('btn-cam-orbit').classList.remove('active');
+    resizeCanvas2D();
+  }
+});
+
+// ─── FLAT 2D DIAGRAM MODE: state + renderer ─────────────────────────────────
+const CFG_2D = {
+  warp: 0.65,        // grid curvature warp amount, 0..1
+  spin: 0.35,        // disk/ring rotation speed
+  showGrid: true,
+  showHawking: true,
+  showJets: true,
+};
+
+document.getElementById('sl-2dwarp').addEventListener('input', (e) => {
+  CFG_2D.warp = parseFloat(e.target.value) / 100;
+  document.getElementById('vl-2dwarp').textContent = e.target.value;
+  document.getElementById('sf-2dwarp').style.width = e.target.value + '%';
+});
+document.getElementById('sl-2dspin').addEventListener('input', (e) => {
+  CFG_2D.spin = parseFloat(e.target.value) / 100;
+  document.getElementById('vl-2dspin').textContent = e.target.value;
+  document.getElementById('sf-2dspin').style.width = e.target.value + '%';
+});
+const btn2dGrid = document.getElementById('btn-2d-grid');
+btn2dGrid.addEventListener('click', () => {
+  CFG_2D.showGrid = !CFG_2D.showGrid;
+  btn2dGrid.classList.toggle('active', CFG_2D.showGrid);
+});
+const btn2dHawking = document.getElementById('btn-2d-hawking');
+btn2dHawking.addEventListener('click', () => {
+  CFG_2D.showHawking = !CFG_2D.showHawking;
+  btn2dHawking.classList.toggle('active', CFG_2D.showHawking);
+});
+const btn2dJets = document.getElementById('btn-2d-jets');
+btn2dJets.addEventListener('click', () => {
+  CFG_2D.showJets = !CFG_2D.showJets;
+  btn2dJets.classList.toggle('active', CFG_2D.showJets);
+});
+
+// Hawking radiation particles — flat radial spray, recycled on a life cycle.
+const HAWKING_2D_COUNT = 140;
+const hawking2D = Array.from({ length: HAWKING_2D_COUNT }, () => ({
+  angle: Math.random() * Math.PI * 2,
+  life: Math.random(),
+  speed: 0.25 + Math.random() * 0.55,
+  side: Math.random() < 0.5 ? -1 : 1, // +1 escapes outward, -1 falls inward and fades
+}));
+
+// Jet particles — flat vertical beams launched from the poles (top/bottom in
+// the flat schematic, since there is no 3D "up axis" — we use screen-up/down).
+const JET_2D_COUNT = 70;
+const jets2D = Array.from({ length: JET_2D_COUNT }, () => ({
+  side: Math.random() < 0.5 ? 1 : -1,   // +1 = upward jet, -1 = downward jet
+  life: Math.random(),
+  speed: 0.5 + Math.random() * 0.7,
+  lane: (Math.random() - 0.5) * 0.5,    // lateral offset fraction within the jet cone
+}));
+
+function drawFlat2D(W, H, t) {
+  ctx2d.clearRect(0, 0, W, H);
+  const cx = W / 2, cy = H / 2;
+  const RS = Math.min(W, H) * 0.07; // flat schematic event-horizon radius
+
+  // ── Background: deep flat void, no gradients pretending at depth ──
+  ctx2d.fillStyle = '#03060c';
+  ctx2d.fillRect(0, 0, W, H);
+
+  // ── Faint starfield, flat dots, no parallax ──
+  ctx2d.fillStyle = 'rgba(200,215,235,0.5)';
+  for (let i = 0; i < 90; i++) {
+    const sx = (Math.sin(i * 12.9898) * 43758.5453) % 1;
+    const sy = (Math.sin(i * 78.233) * 43758.5453) % 1;
+    const px = ((sx + 1) % 1) * W, py = ((sy + 1) % 1) * H;
+    ctx2d.globalAlpha = 0.15 + 0.25 * Math.abs(Math.sin(i + t * 0.3));
+    ctx2d.fillRect(px, py, 1.3, 1.3);
+  }
+  ctx2d.globalAlpha = 1;
+
+  // ── Warped spacetime grid: a flat orthographic grid of straight lines,
+  //    radially displaced toward the centre to schematically show curvature —
+  //    this is the "flat" analogue of the embedding funnel, but drawn as a
+  //    literal 2D deformed grid instead of a 3D bowl. Pull is strong and
+  //    non-linear near the horizon so lines visibly crowd and curve sharply,
+  //    not just nudge inward — a dramatic, highly-distorted look. ──
+  if (CFG_2D.showGrid) {
+    const spacing = Math.min(W, H) * 0.072;
+    const cols = Math.ceil(W / spacing) + 2;
+    const rows = Math.ceil(H / spacing) + 2;
+    ctx2d.lineWidth = 1;
+
+    function warp(px, py) {
+      const dx = px - cx, dy = py - cy;
+      const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+      // Steeper falloff (dist^1.35) so the pull is dramatically stronger close
+      // in than the old linear version, while still settling to ~flat far out.
+      const pull = (RS * 9 * CFG_2D.warp) / (Math.pow(dist * 0.05, 1.35) + 1);
+      const f = Math.max(0.02, 1 - pull / dist);
+      return [cx + dx * f, cy + dy * f];
+    }
+
+    // vertical-ish lines (grid columns), each built from warped sample points
+    for (let c = -1; c <= cols; c++) {
+      const px0 = c * spacing - ((t * 4) % spacing);
+      ctx2d.beginPath();
+      for (let r = 0; r <= rows; r++) {
+        const py0 = r * spacing;
+        const [wx, wy] = warp(px0, py0);
+        if (r === 0) ctx2d.moveTo(wx, wy); else ctx2d.lineTo(wx, wy);
+      }
+      // Fade the stroke based on how close this line's midpoint sits to the
+      // core, so dense, overlapping curves near the horizon don't turn into
+      // a solid smear — they stay readable as distortion, not noise.
+      const midDist = Math.hypot(px0 - cx, (rows * spacing) / 2 - cy);
+      const nearFade = Math.min(1, midDist / (RS * 2.2));
+      ctx2d.strokeStyle = `rgba(127,232,255,${(0.24 * (0.35 + 0.65 * nearFade)).toFixed(3)})`;
+      ctx2d.stroke();
+    }
+    // horizontal-ish lines (grid rows)
+    for (let r = -1; r <= rows; r++) {
+      const py0 = r * spacing;
+      ctx2d.beginPath();
+      for (let c = 0; c <= cols; c++) {
+        const px0 = c * spacing - ((t * 4) % spacing);
+        const [wx, wy] = warp(px0, py0);
+        if (c === 0) ctx2d.moveTo(wx, wy); else ctx2d.lineTo(wx, wy);
+      }
+      const midDist = Math.hypot((cols * spacing) / 2 - cx, py0 - cy);
+      const nearFade = Math.min(1, midDist / (RS * 2.2));
+      ctx2d.strokeStyle = `rgba(127,232,255,${(0.24 * (0.35 + 0.65 * nearFade)).toFixed(3)})`;
+      ctx2d.stroke();
+    }
+  }
+
+  // ── Relativistic jets: flat vertical beams of particles streaming from
+  //    the poles, schematic and axis-aligned — no 3D divergence cone. ──
+  if (CFG_2D.showJets) {
+    const beamLen = Math.min(W, H) * 0.46;
+    // faint beam guide lines
+    ctx2d.strokeStyle = 'rgba(127,232,255,0.14)';
+    ctx2d.lineWidth = 1.5;
+    ctx2d.beginPath();
+    ctx2d.moveTo(cx, cy - RS * 0.9); ctx2d.lineTo(cx, cy - RS * 0.9 - beamLen);
+    ctx2d.moveTo(cx, cy + RS * 0.9); ctx2d.lineTo(cx, cy + RS * 0.9 + beamLen);
+    ctx2d.stroke();
+
+    jets2D.forEach(j => {
+      j.life += 0.012 * j.speed;
+      if (j.life > 1) j.life = 0;
+      const dist = RS * 0.9 + j.life * beamLen;
+      const taper = j.life * j.lane * RS * 0.6; // widens slightly with distance
+      const px = cx + taper;
+      const py = cy + j.side * dist;
+      const alpha = (1 - j.life) * 0.85;
+      const col = j.side > 0 ? `rgba(255,181,107,${alpha.toFixed(2)})` : `rgba(127,232,255,${alpha.toFixed(2)})`;
+      ctx2d.beginPath();
+      ctx2d.arc(px, py, 1.4, 0, Math.PI * 2);
+      ctx2d.fillStyle = col;
+      ctx2d.fill();
+    });
+  }
+
+  // ── Accretion disk: flat edge-on line (not an ellipse) — literally flat,
+  //    a single horizontal band with a Doppler-style brightness gradient. ──
+  const diskHalfW = RS * 4.2;
+  const diskGrad = ctx2d.createLinearGradient(cx - diskHalfW, cy, cx + diskHalfW, cy);
+  diskGrad.addColorStop(0, 'rgba(255,181,107,0.05)');
+  diskGrad.addColorStop(0.35, 'rgba(255,210,150,0.55)');
+  diskGrad.addColorStop(0.5, 'rgba(255,255,255,0.9)');
+  diskGrad.addColorStop(0.65, 'rgba(180,225,255,0.55)');
+  diskGrad.addColorStop(1, 'rgba(127,232,255,0.05)');
+  ctx2d.save();
+  ctx2d.translate(cx, cy);
+  ctx2d.rotate(Math.sin(t * 0.05) * 0.015 * CFG_2D.spin); // gentle schematic wobble
+  ctx2d.fillStyle = diskGrad;
+  ctx2d.fillRect(-diskHalfW, -1.6, diskHalfW * 2, 3.2);
+  ctx2d.restore();
+
+  // ── Photon-ring lensing halo: layered to feel like a genuine gravitational
+  //    boundary rather than a clean geometric ring — a soft foggy dust halo,
+  //    a blurred glowing photon ring, and faint secondary lensing arcs. ──
+
+  // Foggy dark halo: dust/gas dimming the view just outside the photon ring,
+  // built from several overlapping soft radial gradients so it doesn't read
+  // as one flat vignette.
+  for (let i = 0; i < 3; i++) {
+    const fogR = RS * (2.6 + i * 1.3);
+    const wobble = 1 + 0.05 * Math.sin(t * 0.15 + i * 2.1);
+    const fogGrad = ctx2d.createRadialGradient(cx, cy, RS * 1.4, cx, cy, fogR * wobble);
+    fogGrad.addColorStop(0, `rgba(10,8,18,${0.5 - i * 0.12})`);
+    fogGrad.addColorStop(0.6, `rgba(14,10,22,${0.22 - i * 0.06})`);
+    fogGrad.addColorStop(1, 'rgba(10,8,18,0)');
+    ctx2d.beginPath();
+    ctx2d.arc(cx, cy, fogR * wobble, 0, Math.PI * 2);
+    ctx2d.fillStyle = fogGrad;
+    ctx2d.fill();
+  }
+
+  // Soft glowing halo around the horizon — pure gradient, no stroked outline,
+  // so there's no hard ring sitting on top of the fog (matches the soft,
+  // ring-free glow used everywhere else in the project).
+  const shimmer = 1 + 0.06 * Math.sin(t * 1.8);
+  const ringGlow = ctx2d.createRadialGradient(cx, cy, RS * 0.9, cx, cy, RS * 2.3 * shimmer);
+  ringGlow.addColorStop(0, 'rgba(127,232,255,0)');
+  ringGlow.addColorStop(0.4, 'rgba(127,232,255,0.10)');
+  ringGlow.addColorStop(0.6, 'rgba(180,225,255,0.20)');
+  ringGlow.addColorStop(0.78, 'rgba(127,232,255,0.09)');
+  ringGlow.addColorStop(1, 'rgba(127,232,255,0)');
+  ctx2d.beginPath();
+  ctx2d.arc(cx, cy, RS * 2.3 * shimmer, 0, Math.PI * 2);
+  ctx2d.fillStyle = ringGlow;
+  ctx2d.fill();
+
+  // ── Hawking radiation: flat dots spraying from the horizon edge — half
+  //    escape outward and fade, half fall inward and vanish at the core. ──
+  if (CFG_2D.showHawking) {
+    hawking2D.forEach(p => {
+      p.life += 0.01 * p.speed;
+      if (p.life > 1) { p.life = 0; p.angle = Math.random() * Math.PI * 2; }
+      const dist = p.side > 0
+        ? RS * 1.05 + p.life * RS * 2.4   // escaping outward
+        : RS * 1.05 * (1 - p.life);        // falling inward
+      const px = cx + Math.cos(p.angle) * dist;
+      const py = cy + Math.sin(p.angle) * dist;
+      const alpha = p.side > 0 ? (1 - p.life) * 0.85 : p.life * 0.6;
+      ctx2d.beginPath();
+      ctx2d.arc(px, py, 1.1, 0, Math.PI * 2);
+      ctx2d.fillStyle = `rgba(${p.side > 0 ? '255,181,107' : '127,232,255'},${alpha.toFixed(2)})`;
+      ctx2d.fill();
+    });
+  }
+
+  // ── Active infall events: object drops, file spaghettification, TDE stars ──
+  updateAndDrawInfalls2D(cx, cy, RS, t);
+  updateAndDrawBursts2D();
+
+  // ── The singularity itself: pure flat black disc, no shading, no lighting,
+  //    no outline — just the void, with the soft halo doing all the work. ──
+  ctx2d.beginPath();
+  ctx2d.arc(cx, cy, RS, 0, Math.PI * 2);
+  ctx2d.fillStyle = '#000000';
+  ctx2d.fill();
+}
+
+// ─── FLAT 2D: shared infall event system (object drop / file / TDE star) ────
+// All three 3D features (Drop Object, Spaghettify a File, Tidal Disruption)
+// get an equivalent flat-2D rendering here — a curved 2D spiral trail drawn
+// with Canvas2D instead of a THREE.TubeGeometry mesh, so they read as the
+// "flat diagram" version of the exact same physical event.
+const infalls2D = [];
+
+function spawnInfall2D(opts) {
+  const ev = {
+    type: opts.type,                       // 'object' | 'file' | 'tde'
+    angle: Math.random() * Math.PI * 2,
+    startTime: performance.now(),
+    duration: opts.duration,
+    path: [],                              // trail of {x,y} in normalized (RS-relative) units
+    color: opts.color,                     // [r,g,b] tip/strand colour
+    radiusUnits: opts.radiusUnits || 20,   // starting distance in RS units
+    starRadiusUnits: opts.starRadiusUnits || 0, // >0 only for TDE: visible star body
+    onComplete: opts.onComplete || null,
+    done: false,
+  };
+  infalls2D.push(ev);
+  return ev;
+}
+
+function updateAndDrawInfalls2D(cx, cy, RS, t) {
+  for (let k = infalls2D.length - 1; k >= 0; k--) {
+    const ev = infalls2D[k];
+    const elapsed = performance.now() - ev.startTime;
+    const p = Math.min(1, elapsed / ev.duration);
+
+    // Spiral inward in the flat XY plane only — true polar motion (radius
+    // shrinks, angle winds faster as it approaches), no vertical squash or
+    // foreshortening of any kind. This is a top-down 2D spiral, not a tilted
+    // 3D ellipse standing in for depth.
+    //
+    // Angle is integrated from a smooth, continuously-increasing angular
+    // velocity (eased with p²) rather than incremented by a fixed per-frame
+    // step — so the spin accelerates as a smooth curve into the plunge
+    // instead of jumping between two flat rates frame to frame.
+    if (ev.lastP === undefined) ev.lastP = 0;
+    const dp = Math.max(0, p - ev.lastP);
+    ev.lastP = p;
+    const angularVel = 0.9 + Math.pow(p, 2) * 14; // smoothly ramps up near the horizon
+    ev.angle += angularVel * dp;
+
+    const ease = Math.pow(p, 1.6);
+    const dist = RS * (ev.radiusUnits * (1 - ease) + 1.02 * ease);
+    const px = cx + Math.cos(ev.angle) * dist;
+    const py = cy + Math.sin(ev.angle) * dist;
+
+    ev.path.push({ x: px, y: py });
+    if (ev.path.length > 46) ev.path.shift();
+
+    // Proximity 0 (far) -> 1 (at horizon): drives stretch length, heat colour, fade.
+    const proximity = Math.max(0, 1 - (dist - RS) / (RS * (ev.radiusUnits - 1)));
+    const stretchPts = Math.max(2, Math.round(4 + proximity * 22));
+    const trail = ev.path.slice(-stretchPts);
+
+    // ── Tidal strand: a tapering polyline traced through recent path points ──
+    if (trail.length >= 2) {
+      const heat = Math.min(1, proximity * 1.3);
+      const [r0, g0, b0] = ev.color;
+      const r = Math.round(r0 + (255 - r0) * heat * 0.4);
+      const g = Math.round(g0 * (1 - heat * 0.3));
+      const b = Math.round(b0 * (1 - heat * 0.5));
+      const fadeOut = dist < RS * 1.3 ? Math.max(0, (dist - RS * 0.95) / (RS * 0.35)) : 1;
+
+      for (let i = 1; i < trail.length; i++) {
+        const a = trail[i - 1], b2 = trail[i];
+        const frac = i / trail.length; // 0 near tail, 1 near tip
+        const w = Math.max(0.6, 3.2 * frac);
+        ctx2d.beginPath();
+        ctx2d.moveTo(a.x, a.y);
+        ctx2d.lineTo(b2.x, b2.y);
+        ctx2d.lineWidth = w;
+        ctx2d.lineCap = 'round';
+        ctx2d.strokeStyle = `rgba(${r},${g},${b},${(frac * 0.9 * fadeOut).toFixed(2)})`;
+        ctx2d.stroke();
+      }
+
+      // Glowing tip — and, for a TDE, a visible star body that shrinks as it's torn apart.
+      const tip = trail[trail.length - 1];
+      if (ev.starRadiusUnits > 0) {
+        const coreShrink = Math.max(0.08, 1 - proximity * 0.92);
+        const starR = RS * ev.starRadiusUnits * coreShrink;
+        const glowGrad = ctx2d.createRadialGradient(tip.x, tip.y, 0, tip.x, tip.y, starR * 2.8);
+        glowGrad.addColorStop(0, `rgba(${r},${g + 30},${b + 40},${0.9 * fadeOut})`);
+        glowGrad.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx2d.beginPath();
+        ctx2d.arc(tip.x, tip.y, starR * 2.8, 0, Math.PI * 2);
+        ctx2d.fillStyle = glowGrad;
+        ctx2d.fill();
+        ctx2d.beginPath();
+        ctx2d.arc(tip.x, tip.y, starR, 0, Math.PI * 2);
+        ctx2d.fillStyle = `rgba(255,${245 - heat * 60},${230 - heat * 130},${fadeOut})`;
+        ctx2d.fill();
+      } else {
+        ctx2d.beginPath();
+        ctx2d.arc(tip.x, tip.y, 2.6, 0, Math.PI * 2);
+        ctx2d.fillStyle = `rgba(${Math.min(255, r + 40)},${Math.min(255, g + 40)},${Math.min(255, b + 40)},${fadeOut})`;
+        ctx2d.fill();
+      }
+    }
+
+    if (p >= 1 && !ev.done) {
+      ev.done = true;
+      if (ev.onComplete) ev.onComplete(cx, cy, RS);
+      infalls2D.splice(k, 1);
+    }
+  }
+}
+
+// Small one-off burst of bright points right at the horizon — the flat-2D
+// equivalent of emitHawkingBurst(), marking a file's "information" radiating
+// back out after being scrambled.
+const bursts2D = [];
+function spawnBurst2D(cx, cy, RS) {
+  const count = 36;
+  const particles = [];
+  for (let i = 0; i < count; i++) {
+    const a = Math.random() * Math.PI * 2;
+    particles.push({
+      x: cx + Math.cos(a) * RS * 1.05,
+      y: cy + Math.sin(a) * RS * 1.05,
+      vx: Math.cos(a) * (0.6 + Math.random() * 1.1),
+      vy: Math.sin(a) * (0.6 + Math.random() * 1.1),
+    });
+  }
+  bursts2D.push({ particles, start: performance.now(), duration: 1100 });
+}
+function updateAndDrawBursts2D() {
+  for (let k = bursts2D.length - 1; k >= 0; k--) {
+    const b = bursts2D[k];
+    const e = (performance.now() - b.start) / b.duration;
+    if (e >= 1) { bursts2D.splice(k, 1); continue; }
+    const alpha = Math.max(0, 1 - e);
+    b.particles.forEach(pt => {
+      pt.x += pt.vx; pt.y += pt.vy;
+      ctx2d.beginPath();
+      ctx2d.arc(pt.x, pt.y, 1.6, 0, Math.PI * 2);
+      ctx2d.fillStyle = `rgba(140,255,230,${alpha.toFixed(2)})`;
+      ctx2d.fill();
+    });
+  }
+}
+
+
+let t2d = 0;
+function animate2D() {
+  requestAnimationFrame(animate2D);
+  if (!CFG.show2D) return;
+  t2d += 1;
+  drawFlat2D(canvas2d.width, canvas2d.height, t2d * 0.05);
+}
+animate2D();
 
 // ─── FUNNEL MODE: UI bindings (fully independent of CFG/3D-scene sliders) ───
 const fMassSlider = document.getElementById('sl-fmass');
@@ -2468,6 +2993,10 @@ btnFJets.addEventListener('click', () => {
 
 // ─── UI: DROP OBJECT ─────────────────────────────────────────────────────────
 document.getElementById('btn-drop').addEventListener('click', () => {
+  if (CFG.show2D) {
+    spawnInfall2D({ type: 'object', duration: 4000, color: [255, 242, 224], radiusUnits: 20 });
+    return;
+  }
   const RS_SCENE = 3.5;
 
   // Glowing tip (the leading, densest end falling toward the hole).
@@ -2626,6 +3155,20 @@ document.getElementById('btn-drop').addEventListener('click', () => {
     btnFile.disabled = true;
     statusEl.classList.add('active');
     statusEl.textContent = `Reading ${file.name} (${formatBytes(file.size)})…`;
+
+    if (CFG.show2D) {
+      spawnInfall2D({
+        type: 'file',
+        duration: 4200,
+        color: [155, 255, 224],
+        radiusUnits: 20,
+        onComplete: (cx, cy, RS) => {
+          spawnBurst2D(cx, cy, RS);
+          scrambleFile(file);
+        },
+      });
+      return;
+    }
 
     const RS_SCENE = 3.5;
 
@@ -2825,6 +3368,16 @@ document.getElementById('btn-drop').addEventListener('click', () => {
 
 // ─── TIDAL DISRUPTION EVENT ──────────────────────────────────────────────────
 document.getElementById('btn-tde').addEventListener('click', () => {
+  if (CFG.show2D) {
+    spawnInfall2D({
+      type: 'tde',
+      duration: 7000,
+      color: [255, 207, 138],
+      radiusUnits: 34,
+      starRadiusUnits: 0.9,
+    });
+    return;
+  }
   const RS_SCENE = 3.5;
   const R_TIDAL = RS_SCENE * 4; // real TDEs disrupt the star a few r_s out, well before the horizon
   const STAR_RADIUS = 1.1; // visible "sun" size before disruption
@@ -3209,7 +3762,7 @@ function animate() {
     }
   }
 
-  renderer.render(scene, camera);
+  if (!CFG.show2D) renderer.render(scene, camera);
 }
 animate();
 
