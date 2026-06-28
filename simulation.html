@@ -5,44 +5,59 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Black Hole — Spacetime Singularity</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  --void: #04040f;
-  --surface-0: #06061a;
-  --surface-1: rgba(9,7,26,0.88);
-  --surface-2: rgba(14,10,38,0.72);
-  --surface-3: rgba(20,15,52,0.55);
-  --surface-hover: rgba(26,18,64,0.80);
-  --border-subtle: rgba(110,80,240,0.13);
-  --border-mid: rgba(130,95,255,0.22);
-  --border-glow: rgba(140,100,255,0.42);
-  --accent-violet: #9b78ff;
-  --accent-violet-dim: rgba(155,120,255,0.18);
-  --accent-teal: #00ddb8;
-  --accent-teal-dim: rgba(0,221,184,0.15);
-  --accent-hot: #ff6535;
-  --accent-hot-dim: rgba(255,101,53,0.14);
-  --accent-amber: #ffb347;
-  --text-primary: rgba(228,222,255,0.94);
-  --text-secondary: rgba(148,132,200,0.60);
-  --text-tertiary: rgba(110,95,165,0.45);
-  --text-value: #00ddb8;
-  --text-value-warm: #ffb347;
-  --panel-w: 300px;
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 14px;
-  --panel-pad: 14px;
+  /* ── Glass instrument palette ── */
+  --void: #03060c;
+  --surface-0: #060b15;
+
+  /* glass plate fills — cool slate glass, low opacity so the scene reads through */
+  --glass-1: rgba(22,30,46,0.40);
+  --glass-2: rgba(26,36,54,0.30);
+  --glass-3: rgba(32,44,64,0.22);
+  --glass-hover: rgba(40,54,78,0.46);
+
+  /* hairline + specular edges */
+  --edge-soft: rgba(180,210,255,0.10);
+  --edge-mid: rgba(180,210,255,0.20);
+  --edge-bright: rgba(210,235,255,0.38);
+  --specular: rgba(255,255,255,0.55);
+
+  /* accents: horizon cyan + accretion amber */
+  --accent-cyan: #7fe8ff;
+  --accent-cyan-dim: rgba(127,232,255,0.16);
+  --accent-cyan-soft: rgba(127,232,255,0.32);
+  --accent-amber: #ffb56b;
+  --accent-amber-dim: rgba(255,181,107,0.16);
+  --accent-amber-soft: rgba(255,181,107,0.34);
+  --accent-rose: #ff6b81;
+  --accent-rose-dim: rgba(255,107,129,0.15);
+
+  --text-primary: rgba(236,244,255,0.96);
+  --text-secondary: rgba(173,191,217,0.62);
+  --text-tertiary: rgba(130,148,176,0.42);
+  --text-value: #7fe8ff;
+  --text-value-warm: #ffb56b;
+
+  --panel-w: 312px;
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --panel-pad: 16px;
+
+  --blur-glass: blur(28px) saturate(1.7);
+  --font-display: 'Space Grotesk', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
 }
 
 html, body {
   width: 100%; height: 100%;
   background: var(--void);
   overflow: hidden;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
   color: var(--text-primary);
   /* prevent iOS bounce */
   position: fixed;
@@ -60,7 +75,7 @@ canvas {
 /* ── SCANLINES ── */
 .scanline {
   position: fixed; inset: 0;
-  background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.018) 2px, rgba(0,0,0,0.018) 4px);
+  background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.014) 2px, rgba(0,0,0,0.014) 4px);
   pointer-events: none; z-index: 20;
 }
 
@@ -72,7 +87,7 @@ canvas {
 }
 #crosshair::before, #crosshair::after {
   content: ''; position: absolute;
-  background: rgba(160,124,255,0.18);
+  background: rgba(210,235,255,0.22);
 }
 #crosshair::before { width: 1px; height: 18px; left: 0; top: -9px; }
 #crosshair::after  { height: 1px; width: 18px; top: 0; left: -9px; }
@@ -81,7 +96,7 @@ canvas {
   transform: translate(-50%,-50%);
   width: 3px; height: 3px;
   border-radius: 50%;
-  background: rgba(160,124,255,0.45);
+  background: rgba(210,235,255,0.5);
   pointer-events: none; z-index: 5;
 }
 
@@ -100,54 +115,83 @@ canvas {
   pointer-events: none;
 }
 
-#title-block { pointer-events: none; }
+#title-block {
+  pointer-events: none;
+  background: var(--glass-1);
+  border: 1px solid var(--edge-soft);
+  border-radius: var(--radius-md);
+  padding: 14px 18px 16px;
+  backdrop-filter: var(--blur-glass);
+  -webkit-backdrop-filter: var(--blur-glass);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.35), inset 0 1px 0 var(--edge-bright), inset 0 0 0 1px rgba(255,255,255,0.02);
+  position: relative;
+  overflow: hidden;
+  max-width: 86vw;
+}
+#title-block::before {
+  content: '';
+  position: absolute; top: 0; left: 8%; right: 8%; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--specular), transparent);
+  opacity: 0.5;
+}
 #title-block .eyebrow {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
   font-size: 0.52rem;
   letter-spacing: 0.35em;
-  color: var(--accent-violet);
+  color: var(--accent-cyan);
   text-transform: uppercase;
-  opacity: 0.8;
-  margin-bottom: 5px;
+  opacity: 0.85;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+#title-block .eyebrow::before {
+  content: '';
+  width: 4px; height: 4px;
+  border-radius: 50%;
+  background: var(--accent-cyan);
+  box-shadow: 0 0 8px var(--accent-cyan);
+  flex-shrink: 0;
 }
 #title-block h1 {
-  font-family: 'Syne', sans-serif;
-  font-weight: 800;
-  font-size: clamp(1.1rem, 3.8vw, 1.7rem);
-  letter-spacing: 0.08em;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: clamp(1.15rem, 3.8vw, 1.8rem);
+  letter-spacing: 0.02em;
   color: #fff;
-  text-shadow: 0 0 30px rgba(140,100,255,0.5), 0 0 60px rgba(0,200,170,0.15);
-  text-transform: uppercase;
+  text-shadow: 0 0 30px rgba(127,232,255,0.35), 0 0 70px rgba(255,181,107,0.12);
   line-height: 1.1;
 }
 #title-block .sub {
-  font-size: 0.54rem;
-  letter-spacing: 0.2em;
+  font-size: 0.56rem;
+  letter-spacing: 0.14em;
   color: var(--text-secondary);
-  margin-top: 5px;
+  margin-top: 6px;
 }
 #back-link {
   pointer-events: auto;
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  margin-top: 12px;
-  font-family: 'JetBrains Mono', monospace;
+  margin-top: 13px;
+  font-family: var(--font-mono);
   font-size: 0.58rem;
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--text-secondary);
   text-decoration: none;
-  border: 1px solid var(--border-subtle);
-  background: var(--surface-2);
-  padding: 6px 10px;
+  border: 1px solid var(--edge-soft);
+  background: var(--glass-2);
+  padding: 7px 11px;
   border-radius: var(--radius-sm);
-  transition: color 0.2s, border-color 0.2s, background 0.2s;
+  transition: color 0.2s, border-color 0.2s, background 0.2s, transform 0.2s;
 }
 #back-link:hover {
   color: var(--text-primary);
-  border-color: var(--border-glow);
-  background: var(--surface-hover);
+  border-color: var(--accent-cyan-soft);
+  background: var(--glass-hover);
+  transform: translateY(-1px);
 }
 #back-link svg { width: 11px; height: 11px; flex-shrink: 0; }
 
@@ -164,20 +208,21 @@ canvas {
   align-items: center;
   justify-content: center;
   gap: 4px;
-  width: 22px;
-  height: 64px;
-  background: var(--surface-1);
-  border: 1px solid var(--border-subtle);
+  width: 24px;
+  height: 68px;
+  background: var(--glass-1);
+  border: 1px solid var(--edge-soft);
   border-right: none;
   border-radius: var(--radius-md) 0 0 var(--radius-md);
   transition: right 0.45s cubic-bezier(0.4,0,0.2,1), background 0.2s, border-color 0.2s;
   z-index: 30;
-  backdrop-filter: blur(24px) saturate(1.4);
-  -webkit-backdrop-filter: blur(24px) saturate(1.4);
+  backdrop-filter: var(--blur-glass);
+  -webkit-backdrop-filter: var(--blur-glass);
+  box-shadow: -6px 0 24px rgba(0,0,0,0.3), inset 1px 0 0 var(--edge-bright);
 }
 #dock-tab:hover {
-  background: var(--surface-hover);
-  border-color: var(--border-mid);
+  background: var(--glass-hover);
+  border-color: var(--accent-cyan-soft);
 }
 #dock-tab.collapsed { right: 0; }
 #dock-tab .tab-icon {
@@ -188,7 +233,7 @@ canvas {
 #dock-tab .tab-icon span {
   display: block;
   width: 8px; height: 1px;
-  background: var(--accent-violet);
+  background: var(--accent-cyan);
   border-radius: 2px;
   opacity: 0.6;
   transition: opacity 0.2s, width 0.2s;
@@ -211,45 +256,45 @@ canvas {
   display: flex;
   flex-direction: column;
   pointer-events: all;
-  background: var(--surface-1);
-  border-left: 1px solid var(--border-subtle);
-  backdrop-filter: blur(32px) saturate(1.6);
-  -webkit-backdrop-filter: blur(32px) saturate(1.6);
+  background: var(--glass-1);
+  border-left: 1px solid var(--edge-soft);
+  backdrop-filter: var(--blur-glass);
+  -webkit-backdrop-filter: var(--blur-glass);
   transform: translateX(0);
   transition: transform 0.45s cubic-bezier(0.4,0,0.2,1);
   z-index: 25;
   overflow: hidden;
-  box-shadow: -16px 0 48px rgba(0,0,0,0.45), -1px 0 0 rgba(110,80,240,0.08);
+  box-shadow: -20px 0 60px rgba(0,0,0,0.4), inset 1px 0 0 var(--edge-bright);
 }
 #side-dock.collapsed {
   transform: translateX(100%);
 }
 
-/* Iridescent left border accent */
+/* Iridescent left border accent — refractive cyan→amber seam, glass-edge style */
 #side-dock::before {
   content: '';
   position: absolute;
   top: 0; left: 0; bottom: 0;
   width: 1px;
-  background: linear-gradient(180deg, transparent 0%, var(--accent-violet) 30%, var(--accent-teal) 65%, transparent 100%);
-  opacity: 0.5;
+  background: linear-gradient(180deg, transparent 0%, var(--accent-cyan) 28%, var(--accent-amber) 62%, transparent 100%);
+  opacity: 0.55;
   z-index: 1;
 }
-/* Subtle noise texture overlay */
+/* Subtle noise texture overlay — keeps the glass from looking like flat color */
 #side-dock::after {
   content: '';
   position: absolute;
   inset: 0;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.025'/%3E%3C/svg%3E");
   pointer-events: none;
-  opacity: 0.4;
+  opacity: 0.5;
   z-index: 0;
 }
 
 /* ── DOCK HEADER ── */
 .dock-header {
-  padding: 16px var(--panel-pad) 13px;
-  border-bottom: 1px solid var(--border-subtle);
+  padding: 18px var(--panel-pad) 15px;
+  border-bottom: 1px solid var(--edge-soft);
   flex-shrink: 0;
   position: relative;
   z-index: 2;
@@ -260,17 +305,17 @@ canvas {
 }
 .dock-header-left { display: flex; flex-direction: column; gap: 2px; }
 .dock-header-title {
-  font-family: 'Syne', sans-serif;
-  font-weight: 700;
-  font-size: 0.64rem;
-  letter-spacing: 0.28em;
-  text-transform: uppercase;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 0.74rem;
+  letter-spacing: 0.06em;
   color: var(--text-primary);
 }
 .dock-header-sub {
   font-size: 0.44rem;
   letter-spacing: 0.18em;
   color: var(--text-tertiary);
+  text-transform: uppercase;
 }
 /* Live indicator dot in header */
 .dock-header-live {
@@ -278,24 +323,28 @@ canvas {
   align-items: center;
   gap: 5px;
   flex-shrink: 0;
+  background: var(--glass-2);
+  border: 1px solid var(--edge-soft);
+  border-radius: 999px;
+  padding: 4px 9px 4px 7px;
 }
 .live-dot {
   width: 5px; height: 5px;
   border-radius: 50%;
-  background: var(--accent-teal);
-  box-shadow: 0 0 8px var(--accent-teal);
+  background: var(--accent-cyan);
+  box-shadow: 0 0 8px var(--accent-cyan);
   animation: pulse-live 2.4s ease-in-out infinite;
 }
 @keyframes pulse-live {
-  0%, 100% { opacity: 1; transform: scale(1); box-shadow: 0 0 6px var(--accent-teal); }
-  50% { opacity: 0.6; transform: scale(0.75); box-shadow: 0 0 3px var(--accent-teal); }
+  0%, 100% { opacity: 1; transform: scale(1); box-shadow: 0 0 6px var(--accent-cyan); }
+  50% { opacity: 0.6; transform: scale(0.75); box-shadow: 0 0 3px var(--accent-cyan); }
 }
 .live-label {
   font-size: 0.38rem;
   letter-spacing: 0.22em;
   text-transform: uppercase;
-  color: var(--accent-teal);
-  opacity: 0.75;
+  color: var(--accent-cyan);
+  opacity: 0.85;
 }
 
 /* ── DOCK SCROLL AREA ── */
@@ -304,26 +353,26 @@ canvas {
   overflow-y: auto;
   overflow-x: hidden;
   scrollbar-width: thin;
-  scrollbar-color: rgba(110,80,240,0.18) transparent;
-  padding: 10px 0 4px;
+  scrollbar-color: rgba(127,232,255,0.20) transparent;
+  padding: 12px 0 4px;
   position: relative;
   z-index: 2;
 }
 .dock-scroll::-webkit-scrollbar { width: 2px; }
 .dock-scroll::-webkit-scrollbar-track { background: transparent; }
-.dock-scroll::-webkit-scrollbar-thumb { background: rgba(110,80,240,0.22); border-radius: 2px; }
+.dock-scroll::-webkit-scrollbar-thumb { background: rgba(127,232,255,0.24); border-radius: 2px; }
 
 /* ── DOCK SECTION ── */
 .dock-section {
   padding: 0 var(--panel-pad);
-  margin-bottom: 2px;
+  margin-bottom: 3px;
 }
 
 .section-trigger {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 9px 0 8px;
+  padding: 10px 0 9px;
   cursor: pointer;
   user-select: none;
   position: relative;
@@ -333,9 +382,9 @@ canvas {
   position: absolute;
   bottom: 0; left: 0; right: 0;
   height: 1px;
-  background: var(--border-subtle);
+  background: var(--edge-soft);
 }
-.section-trigger:hover .section-title { color: rgba(210,200,255,0.85); }
+.section-trigger:hover .section-title { color: rgba(225,238,255,0.9); }
 
 .section-left {
   display: flex; align-items: center; gap: 7px;
@@ -343,21 +392,21 @@ canvas {
 .section-dot {
   width: 4px; height: 4px;
   border-radius: 50%;
-  background: rgba(110,80,240,0.4);
+  background: rgba(180,210,255,0.32);
   flex-shrink: 0;
   transition: background 0.25s, box-shadow 0.25s;
 }
 .section-dot.active {
-  background: var(--accent-teal);
-  box-shadow: 0 0 6px var(--accent-teal);
+  background: var(--accent-cyan);
+  box-shadow: 0 0 6px var(--accent-cyan);
   animation: pulse-dot 2.5s ease-in-out infinite;
 }
 @keyframes pulse-dot {
-  0%, 100% { box-shadow: 0 0 5px var(--accent-teal); }
-  50% { box-shadow: 0 0 12px var(--accent-teal), 0 0 20px rgba(0,221,184,0.25); }
+  0%, 100% { box-shadow: 0 0 5px var(--accent-cyan); }
+  50% { box-shadow: 0 0 12px var(--accent-cyan), 0 0 20px rgba(127,232,255,0.25); }
 }
 .section-title {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
   font-size: 0.52rem;
   font-weight: 500;
   letter-spacing: 0.2em;
@@ -369,7 +418,7 @@ canvas {
   width: 12px; height: 12px;
   display: flex; align-items: center; justify-content: center;
   flex-shrink: 0;
-  opacity: 0.35;
+  opacity: 0.4;
   transition: transform 0.3s cubic-bezier(0.4,0,0.2,1), opacity 0.2s;
 }
 .section-arrow svg {
@@ -380,8 +429,8 @@ canvas {
   stroke-linecap: round;
   stroke-linejoin: round;
 }
-.section-trigger:hover .section-arrow { opacity: 0.65; }
-.section-trigger.open .section-arrow { transform: rotate(180deg); opacity: 0.5; }
+.section-trigger:hover .section-arrow { opacity: 0.7; }
+.section-trigger.open .section-arrow { transform: rotate(180deg); opacity: 0.55; }
 
 .section-body {
   overflow: hidden;
@@ -391,7 +440,7 @@ canvas {
 .section-body.open {
   max-height: 700px;
   padding-top: 2px;
-  padding-bottom: 8px;
+  padding-bottom: 9px;
 }
 
 /* Spacing between sections */
@@ -403,15 +452,15 @@ canvas {
 .metrics-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 5px;
+  gap: 6px;
   padding-top: 10px;
 }
 .metric-card {
-  background: var(--surface-2);
-  border: 1px solid var(--border-subtle);
+  background: var(--glass-2);
+  border: 1px solid var(--edge-soft);
   border-radius: var(--radius-sm);
-  padding: 9px 10px 8px;
-  transition: border-color 0.2s, background 0.2s;
+  padding: 10px 11px 9px;
+  transition: border-color 0.2s, background 0.2s, transform 0.2s;
   position: relative;
   overflow: hidden;
 }
@@ -420,12 +469,12 @@ canvas {
   position: absolute;
   top: 0; left: 0; right: 0;
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(155,120,255,0.2), transparent);
+  background: linear-gradient(90deg, transparent, var(--specular), transparent);
   opacity: 0;
   transition: opacity 0.2s;
 }
-.metric-card:hover { border-color: var(--border-mid); background: var(--surface-hover); }
-.metric-card:hover::before { opacity: 1; }
+.metric-card:hover { border-color: var(--accent-cyan-soft); background: var(--glass-hover); transform: translateY(-1px); }
+.metric-card:hover::before { opacity: 0.6; }
 
 .metric-label {
   font-size: 0.40rem;
@@ -444,7 +493,7 @@ canvas {
 }
 .metric-card.span-2 { grid-column: 1 / -1; }
 .metric-card.warm .metric-value { color: var(--text-value-warm); }
-.metric-card.hot .metric-value { color: var(--accent-hot); }
+.metric-card.hot .metric-value { color: var(--accent-rose); }
 
 /* ── INFO CARDS (click-to-info) ── */
 .info-card { cursor: pointer; }
@@ -454,18 +503,18 @@ canvas {
   left: 50%; top: 50%;
   transform: translate(-50%, -50%) scale(0.92);
   max-width: min(86vw, 360px);
-  background: var(--surface-1);
-  border: 1px solid var(--border-mid);
+  background: var(--glass-1);
+  border: 1px solid var(--edge-mid);
   border-radius: var(--radius-lg);
-  padding: 16px 18px;
-  backdrop-filter: blur(32px) saturate(1.6);
-  -webkit-backdrop-filter: blur(32px) saturate(1.6);
-  box-shadow: 0 20px 60px rgba(0,0,0,0.5), 0 0 0 1px rgba(155,120,255,0.08) inset;
+  padding: 18px 20px;
+  backdrop-filter: blur(36px) saturate(1.8);
+  -webkit-backdrop-filter: blur(36px) saturate(1.8);
+  box-shadow: 0 24px 70px rgba(0,0,0,0.5), inset 0 1px 0 var(--edge-bright);
   z-index: 60;
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.2s, transform 0.2s;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
   font-size: 0.62rem;
   line-height: 1.55;
   color: var(--text-primary);
@@ -476,17 +525,18 @@ canvas {
   pointer-events: all;
 }
 #info-popover .info-title {
-  font-family: 'Syne', sans-serif;
-  font-weight: 700;
-  font-size: 0.6rem;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: var(--accent-violet);
-  margin-bottom: 8px;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 0.68rem;
+  letter-spacing: 0.04em;
+  color: var(--accent-cyan);
+  margin-bottom: 9px;
 }
 #info-backdrop {
   position: fixed; inset: 0;
-  background: rgba(2,2,10,0.55);
+  background: rgba(2,5,12,0.6);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
   z-index: 55;
   opacity: 0;
   pointer-events: none;
@@ -497,8 +547,8 @@ canvas {
 /* FPS row */
 .fps-row {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 8px 0 1px;
-  border-top: 1px solid var(--border-subtle);
+  padding: 9px 0 1px;
+  border-top: 1px solid var(--edge-soft);
   margin-top: 6px;
 }
 .fps-label {
@@ -513,44 +563,45 @@ canvas {
   display: inline-block;
   width: 3px; height: 3px;
   border-radius: 50%;
-  background: var(--accent-teal);
-  opacity: 0.6;
+  background: var(--accent-cyan);
+  opacity: 0.7;
 }
 #m-fps {
   font-size: 0.60rem;
-  color: var(--accent-teal);
+  color: var(--accent-cyan);
   font-weight: 400;
-  opacity: 0.85;
+  opacity: 0.9;
 }
 
 /* ── TOGGLE ROWS ── */
 .overlay-list {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 5px;
   padding-top: 9px;
 }
 .overlay-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 10px;
+  padding: 9px 11px;
   border-radius: var(--radius-sm);
-  background: var(--surface-2);
-  border: 1px solid var(--border-subtle);
+  background: var(--glass-2);
+  border: 1px solid var(--edge-soft);
   cursor: pointer;
-  transition: background 0.18s, border-color 0.18s, box-shadow 0.18s;
+  transition: background 0.18s, border-color 0.18s, box-shadow 0.18s, transform 0.18s;
   user-select: none;
   gap: 8px;
 }
 .overlay-row:hover {
-  background: var(--surface-hover);
-  border-color: var(--border-mid);
+  background: var(--glass-hover);
+  border-color: var(--edge-mid);
+  transform: translateY(-1px);
 }
 .overlay-row.active {
-  background: rgba(90,60,200,0.10);
-  border-color: rgba(140,100,255,0.32);
-  box-shadow: 0 0 0 1px rgba(155,120,255,0.05) inset;
+  background: rgba(127,232,255,0.07);
+  border-color: var(--accent-cyan-soft);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
 }
 .overlay-row-left {
   display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0;
@@ -577,36 +628,36 @@ canvas {
 .toggle-pill {
   width: 26px; height: 14px;
   border-radius: 7px;
-  background: rgba(70,50,120,0.28);
-  border: 1px solid rgba(110,80,240,0.18);
+  background: rgba(120,140,180,0.18);
+  border: 1px solid var(--edge-soft);
   position: relative;
   transition: background 0.25s, border-color 0.25s, box-shadow 0.25s;
   flex-shrink: 0;
 }
 .overlay-row.active .toggle-pill {
-  background: rgba(0,190,160,0.18);
-  border-color: rgba(0,221,184,0.5);
-  box-shadow: 0 0 10px rgba(0,221,184,0.12);
+  background: rgba(127,232,255,0.16);
+  border-color: rgba(127,232,255,0.55);
+  box-shadow: 0 0 10px rgba(127,232,255,0.15);
 }
 .toggle-pill::after {
   content: '';
   position: absolute;
   width: 8px; height: 8px;
   border-radius: 50%;
-  background: rgba(110,80,240,0.55);
+  background: rgba(200,215,235,0.6);
   top: 2px; left: 2px;
   transition: transform 0.26s cubic-bezier(0.34,1.56,0.64,1), background 0.25s, box-shadow 0.25s;
 }
 .overlay-row.active .toggle-pill::after {
   transform: translateX(12px);
-  background: var(--accent-teal);
-  box-shadow: 0 0 7px rgba(0,221,184,0.6);
+  background: var(--accent-cyan);
+  box-shadow: 0 0 7px rgba(127,232,255,0.7);
 }
 
 /* ── PARAMETER SLIDERS ── */
-.param-list { display: flex; flex-direction: column; gap: 13px; padding-top: 10px; }
+.param-list { display: flex; flex-direction: column; gap: 14px; padding-top: 10px; }
 
-.param-row { display: flex; flex-direction: column; gap: 5px; }
+.param-row { display: flex; flex-direction: column; gap: 6px; }
 .param-header { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
 .param-name {
   font-size: 0.46rem;
@@ -616,8 +667,8 @@ canvas {
 }
 .param-val {
   font-size: 0.54rem;
-  font-weight: 400;
-  color: var(--accent-violet);
+  font-weight: 500;
+  color: var(--accent-cyan);
   min-width: 22px;
   text-align: right;
   font-variant-numeric: tabular-nums;
@@ -643,63 +694,63 @@ input[type=range] {
 .slider-bg {
   position: absolute;
   left: 0; right: 0;
-  height: 2px;
-  background: rgba(110,80,240,0.10);
+  height: 3px;
+  background: rgba(150,170,200,0.14);
   border-radius: 2px;
   overflow: hidden;
   pointer-events: none;
 }
 .slider-fill {
   height: 100%;
-  background: linear-gradient(90deg, rgba(155,120,255,0.7), var(--accent-teal));
+  background: linear-gradient(90deg, var(--accent-cyan), var(--accent-amber));
   border-radius: 2px;
   transition: width 0.04s;
 }
 input[type=range]::-webkit-slider-thumb {
   -webkit-appearance: none;
-  width: 12px; height: 12px;
+  width: 13px; height: 13px;
   border-radius: 50%;
   background: #fff;
-  box-shadow: 0 0 0 1.5px var(--accent-violet), 0 0 10px rgba(155,120,255,0.45), 0 1px 3px rgba(0,0,0,0.5);
+  box-shadow: 0 0 0 1.5px var(--accent-cyan), 0 0 10px rgba(127,232,255,0.5), 0 1px 3px rgba(0,0,0,0.5);
   cursor: pointer;
   transition: box-shadow 0.18s, transform 0.18s;
 }
 input[type=range]:hover::-webkit-slider-thumb, input[type=range]:active::-webkit-slider-thumb {
-  box-shadow: 0 0 0 1.5px var(--accent-teal), 0 0 14px rgba(0,221,184,0.55), 0 1px 3px rgba(0,0,0,0.5);
+  box-shadow: 0 0 0 1.5px var(--accent-amber), 0 0 14px rgba(255,181,107,0.55), 0 1px 3px rgba(0,0,0,0.5);
   transform: scale(1.1);
 }
 input[type=range]::-moz-range-thumb {
-  width: 12px; height: 12px;
+  width: 13px; height: 13px;
   border-radius: 50%;
   background: #fff;
-  box-shadow: 0 0 0 1.5px var(--accent-violet), 0 0 10px rgba(155,120,255,0.45);
+  box-shadow: 0 0 0 1.5px var(--accent-cyan), 0 0 10px rgba(127,232,255,0.5);
   border: none;
   cursor: pointer;
 }
 
 /* ── ACTION SECTION ── */
 .action-section {
-  padding: 10px var(--panel-pad) 14px;
+  padding: 12px var(--panel-pad) 16px;
   flex-shrink: 0;
-  border-top: 1px solid var(--border-subtle);
+  border-top: 1px solid var(--edge-soft);
   position: relative;
   z-index: 2;
   display: flex;
   flex-direction: column;
-  gap: 7px;
+  gap: 8px;
 }
 #btn-drop, #btn-tde {
   width: 100%;
-  font-family: 'JetBrains Mono', monospace;
-  font-weight: 400;
+  font-family: var(--font-mono);
+  font-weight: 500;
   font-size: 0.50rem;
   letter-spacing: 0.18em;
   text-transform: uppercase;
-  padding: 11px 14px;
-  background: var(--accent-hot-dim);
-  border: 1px solid rgba(255,101,53,0.24);
+  padding: 12px 14px;
+  background: var(--accent-rose-dim);
+  border: 1px solid rgba(255,107,129,0.28);
   border-radius: var(--radius-md);
-  color: var(--accent-hot);
+  color: var(--accent-rose);
   cursor: pointer;
   transition: all 0.22s;
   position: relative;
@@ -708,24 +759,26 @@ input[type=range]::-moz-range-thumb {
   align-items: center;
   justify-content: center;
   gap: 7px;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 #btn-tde {
-  background: var(--accent-violet-dim);
-  border: 1px solid rgba(155,120,255,0.28);
-  color: var(--accent-violet);
+  background: var(--accent-amber-dim);
+  border: 1px solid rgba(255,181,107,0.3);
+  color: var(--accent-amber);
 }
 #btn-file {
   width: 100%;
-  font-family: 'JetBrains Mono', monospace;
-  font-weight: 400;
+  font-family: var(--font-mono);
+  font-weight: 500;
   font-size: 0.50rem;
   letter-spacing: 0.18em;
   text-transform: uppercase;
-  padding: 11px 14px;
-  background: var(--accent-teal-dim);
-  border: 1px solid rgba(0,221,184,0.28);
+  padding: 12px 14px;
+  background: var(--accent-cyan-dim);
+  border: 1px solid rgba(127,232,255,0.3);
   border-radius: var(--radius-md);
-  color: var(--accent-teal);
+  color: var(--accent-cyan);
   cursor: pointer;
   transition: all 0.22s;
   position: relative;
@@ -734,19 +787,21 @@ input[type=range]::-moz-range-thumb {
   align-items: center;
   justify-content: center;
   gap: 7px;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 #btn-file::before {
   content: '';
   position: absolute; inset: 0;
-  background: linear-gradient(135deg, rgba(0,221,184,0.10), transparent 60%);
+  background: linear-gradient(135deg, rgba(127,232,255,0.12), transparent 60%);
   opacity: 0;
   transition: opacity 0.22s;
 }
 #btn-file:hover {
-  border-color: rgba(0,221,184,0.55);
-  color: #5cf1d6;
-  background: rgba(0,221,184,0.14);
-  box-shadow: 0 0 20px rgba(0,221,184,0.14), 0 2px 8px rgba(0,0,0,0.3);
+  border-color: rgba(127,232,255,0.6);
+  color: #b5f1ff;
+  background: rgba(127,232,255,0.16);
+  box-shadow: 0 0 22px rgba(127,232,255,0.16), 0 2px 8px rgba(0,0,0,0.3);
   transform: translateY(-1px);
 }
 #btn-file:hover::before { opacity: 1; }
@@ -767,33 +822,33 @@ input[type=range]::-moz-range-thumb {
   padding: 0 4px;
 }
 #file-status a {
-  color: var(--accent-teal);
+  color: var(--accent-cyan);
   text-decoration: underline;
   pointer-events: all;
 }
-#file-status.active { color: var(--accent-teal); }
+#file-status.active { color: var(--accent-cyan); }
 #btn-drop::before, #btn-tde::before {
   content: '';
   position: absolute; inset: 0;
-  background: linear-gradient(135deg, rgba(255,101,53,0.08), transparent 60%);
+  background: linear-gradient(135deg, rgba(255,107,129,0.10), transparent 60%);
   opacity: 0;
   transition: opacity 0.22s;
 }
 #btn-tde::before {
-  background: linear-gradient(135deg, rgba(155,120,255,0.10), transparent 60%);
+  background: linear-gradient(135deg, rgba(255,181,107,0.12), transparent 60%);
 }
 #btn-drop:hover {
-  border-color: rgba(255,101,53,0.50);
-  color: #ff8c65;
-  background: rgba(255,101,53,0.10);
-  box-shadow: 0 0 20px rgba(255,101,53,0.12), 0 2px 8px rgba(0,0,0,0.3);
+  border-color: rgba(255,107,129,0.55);
+  color: #ff96a5;
+  background: rgba(255,107,129,0.12);
+  box-shadow: 0 0 22px rgba(255,107,129,0.14), 0 2px 8px rgba(0,0,0,0.3);
   transform: translateY(-1px);
 }
 #btn-tde:hover {
-  border-color: rgba(155,120,255,0.55);
-  color: #b9a3ff;
-  background: rgba(155,120,255,0.14);
-  box-shadow: 0 0 20px rgba(155,120,255,0.14), 0 2px 8px rgba(0,0,0,0.3);
+  border-color: rgba(255,181,107,0.6);
+  color: #ffcb96;
+  background: rgba(255,181,107,0.16);
+  box-shadow: 0 0 22px rgba(255,181,107,0.16), 0 2px 8px rgba(0,0,0,0.3);
   transform: translateY(-1px);
 }
 #btn-drop:active, #btn-tde:active { transform: translateY(0); }
@@ -809,7 +864,7 @@ input[type=range]::-moz-range-thumb {
   align-items: center;
   justify-content: center;
   gap: 4px;
-  opacity: 0.28;
+  opacity: 0.32;
 }
 .dock-footer-text {
   font-size: 0.34rem;
@@ -839,8 +894,9 @@ input[type=range]::-moz-range-thumb {
   /* HUD top bar stays on top of canvas */
   #hud { z-index: 15; }
   #top-bar { padding: 14px 16px; }
+  #title-block { padding: 11px 14px 13px; }
   #title-block .eyebrow { font-size: 0.48rem; }
-  #title-block h1 { font-size: 1.1rem; }
+  #title-block h1 { font-size: 1.15rem; }
   #title-block .sub { font-size: 0.48rem; }
 
   /* Hide desktop tab entirely on mobile */
@@ -856,14 +912,14 @@ input[type=range]::-moz-range-thumb {
     z-index: 50;
     align-items: center;
     gap: 7px;
-    padding: 10px 20px;
-    background: rgba(9,7,26,0.92);
-    border: 1px solid var(--border-mid);
+    padding: 11px 21px;
+    background: var(--glass-1);
+    border: 1px solid var(--edge-mid);
     border-radius: 30px;
-    backdrop-filter: blur(24px) saturate(1.5);
-    -webkit-backdrop-filter: blur(24px) saturate(1.5);
+    backdrop-filter: blur(28px) saturate(1.6);
+    -webkit-backdrop-filter: blur(28px) saturate(1.6);
     cursor: pointer;
-    box-shadow: 0 4px 24px rgba(0,0,0,0.5), 0 0 0 1px rgba(155,120,255,0.08) inset;
+    box-shadow: 0 6px 28px rgba(0,0,0,0.45), inset 0 1px 0 var(--edge-bright);
     transition: opacity 0.3s, transform 0.3s;
     pointer-events: all;
   }
@@ -875,23 +931,23 @@ input[type=range]::-moz-range-thumb {
   .mobile-toggle-dot {
     width: 6px; height: 6px;
     border-radius: 50%;
-    background: var(--accent-teal);
-    box-shadow: 0 0 8px var(--accent-teal);
+    background: var(--accent-cyan);
+    box-shadow: 0 0 8px var(--accent-cyan);
     animation: pulse-live 2.4s ease-in-out infinite;
     flex-shrink: 0;
   }
   .mobile-toggle-label {
-    font-family: 'JetBrains Mono', monospace;
+    font-family: var(--font-mono);
     font-size: 0.52rem;
     letter-spacing: 0.2em;
     text-transform: uppercase;
     color: var(--text-primary);
-    opacity: 0.85;
+    opacity: 0.88;
   }
   .mobile-toggle-chevron {
     font-size: 0.6rem;
-    color: var(--accent-violet);
-    opacity: 0.7;
+    color: var(--accent-cyan);
+    opacity: 0.75;
     transition: transform 0.3s;
   }
 
@@ -904,21 +960,21 @@ input[type=range]::-moz-range-thumb {
     height: auto;
     max-height: 72vh;
     border-left: none !important;
-    border-top: 1px solid var(--border-mid);
-    border-radius: 20px 20px 0 0;
+    border-top: 1px solid var(--edge-mid);
+    border-radius: 24px 24px 0 0;
     transform: translateY(100%);
     transition: transform 0.42s cubic-bezier(0.4,0,0.2,1);
     z-index: 40;
     /* stronger blur on mobile for legibility over canvas */
-    backdrop-filter: blur(40px) saturate(1.8) brightness(0.85);
-    -webkit-backdrop-filter: blur(40px) saturate(1.8) brightness(0.85);
-    background: rgba(7,5,22,0.95);
+    backdrop-filter: blur(44px) saturate(1.9) brightness(0.9);
+    -webkit-backdrop-filter: blur(44px) saturate(1.9) brightness(0.9);
+    background: rgba(14,20,32,0.55);
   }
   #side-dock::before {
     top: 0; left: 10%; right: 10%; bottom: auto;
     width: auto; height: 1px;
-    background: linear-gradient(90deg, transparent, var(--accent-violet), var(--accent-teal), transparent);
-    opacity: 0.6;
+    background: linear-gradient(90deg, transparent, var(--accent-cyan), var(--accent-amber), transparent);
+    opacity: 0.65;
   }
   #side-dock::after { display: none; }
   #side-dock.collapsed { transform: translateY(100%); }
@@ -941,11 +997,11 @@ input[type=range]::-moz-range-thumb {
     display: block;
     width: 40px; height: 4px;
     border-radius: 2px;
-    background: rgba(155,120,255,0.30);
+    background: rgba(127,232,255,0.35);
     transition: background 0.2s, width 0.2s;
   }
   #side-dock .dock-handle:active::before {
-    background: rgba(0,221,184,0.55);
+    background: var(--accent-amber);
     width: 52px;
   }
 
@@ -1117,7 +1173,7 @@ input[type=range]::-moz-range-thumb {
     </div>
 
     <!-- SECTION 3: Parameters -->
-    <div class="dock-section">
+    <div class="dock-section" id="sec-params-wrap">
       <div class="section-trigger open" data-target="sec-params">
         <div class="section-left">
           <div class="section-dot"></div>
@@ -1181,8 +1237,71 @@ input[type=range]::-moz-range-thumb {
       </div>
     </div>
 
+    <!-- SECTION 3.5: Embedding Funnel Mode (own independent controls, only
+         shown while Embedding Funnel is active — entirely separate from the
+         3D scene's CFG/sliders above) -->
+    <div class="dock-section" id="sec-funnel-mode-wrap" style="display:none;">
+      <div class="section-trigger open" data-target="sec-funnel-mode">
+        <div class="section-left">
+          <div class="section-dot"></div>
+          <div class="section-title">Funnel Diagram</div>
+        </div>
+        <div class="section-arrow"><svg viewBox="0 0 10 6"><polyline points="1,1 5,5 9,1"/></svg></div>
+      </div>
+      <div class="section-body open" id="sec-funnel-mode">
+        <div class="param-list">
+          <div class="param-row">
+            <div class="param-header">
+              <div class="param-name">Mass (M☉)</div>
+              <div class="param-val" id="vl-fmass">1.0M</div>
+            </div>
+            <div class="slider-track">
+              <div class="slider-bg"><div class="slider-fill" id="sf-fmass" style="width:50%"></div></div>
+              <input type="range" id="sl-fmass" min="1" max="100" value="50">
+            </div>
+          </div>
+          <div class="param-row">
+            <div class="param-header">
+              <div class="param-name">Rotation Speed</div>
+              <div class="param-val" id="vl-fspin">20</div>
+            </div>
+            <div class="slider-track">
+              <div class="slider-bg"><div class="slider-fill" id="sf-fspin" style="width:20%"></div></div>
+              <input type="range" id="sl-fspin" min="0" max="100" value="20">
+            </div>
+          </div>
+          <div class="param-row">
+            <div class="param-header">
+              <div class="param-name">Jet Merge Distance</div>
+              <div class="param-val" id="vl-fjetmerge">40</div>
+            </div>
+            <div class="slider-track">
+              <div class="slider-bg"><div class="slider-fill" id="sf-fjetmerge" style="width:40%"></div></div>
+              <input type="range" id="sl-fjetmerge" min="5" max="100" value="40">
+            </div>
+          </div>
+        </div>
+        <div class="overlay-list" style="margin-top:10px;">
+          <div class="overlay-row" id="btn-fradiation">
+            <div class="overlay-row-left">
+              <span class="overlay-icon">✦</span>
+              <div class="overlay-name">Radiation</div>
+            </div>
+            <div class="toggle-pill"></div>
+          </div>
+          <div class="overlay-row" id="btn-fjets">
+            <div class="overlay-row-left">
+              <span class="overlay-icon">⇅</span>
+              <div class="overlay-name">Merging Jets</div>
+            </div>
+            <div class="toggle-pill"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- SECTION 4: Camera Presets -->
-    <div class="dock-section">
+    <div class="dock-section" id="sec-camera-wrap">
       <div class="section-trigger open" data-target="sec-camera">
         <div class="section-left">
           <div class="section-dot"></div>
@@ -1293,12 +1412,24 @@ scene.add(buildStarfield());
 function buildSpacetimeGrid() {
   const group = new THREE.Group();
   const SIZE = 44, DIVS = 22, RS = 3.5, WARP = 5.5;
+  // The warp is an isotropic-coordinate compression: raw radius RS maps to a
+  // warped radius far smaller than RS itself (the horizon sphere is drawn at
+  // radius RS in this same warped space). That means every raw point with
+  // r up to the point where the warp output reaches RS — not just r<=RS —
+  // lands INSIDE the horizon sphere once warped, and got drawn there as a
+  // visible knot of compressed grid lines poking through the sphere's
+  // surface. warpPoint still returns a real (always-defined) position for
+  // every input — clipToHorizon below decides, purely from each point's own
+  // resulting radius, whether to keep it, drop it, or clip the segment to
+  // the horizon's surface, so nothing renders inside the sphere.
   function warpPoint(x, y, z) {
     const r = Math.sqrt(x*x + y*y + z*z);
-    if (r < 0.001) return new THREE.Vector3(0, 0, 0);
     if (r <= RS) {
-      const clampR = RS * 0.18;
-      return new THREE.Vector3((x/r)*clampR, (y/r)*clampR, (z/r)*clampR);
+      // Inside the raw horizon radius too — push slightly along the same
+      // direction so the point still has a well-defined position to clip
+      // against (it will always be discarded by clipToHorizon, never drawn).
+      const rr = Math.max(r, 0.001);
+      return new THREE.Vector3(x/rr, y/rr, z/rr); // unit-length placeholder
     }
     const iso = 1.0 + (RS * 0.5 * WARP) / r;
     const rWarped = r / (iso * iso);
@@ -1322,8 +1453,39 @@ function buildSpacetimeGrid() {
     const t = Math.max(0, Math.min(1, 1 - r/(SIZE*1.2)));
     return new THREE.Color().setHSL(0.72 - t*0.15, 0.9, 0.06 + t*0.5);
   }
+  // Clip a segment so no part of it renders inside the horizon sphere
+  // (radius RS, in this same warped space the grid is plotted in). Both
+  // endpoints are always real positions now; we just check each one's own
+  // radius. If both are outside, draw as-is. If both are inside, drop the
+  // segment entirely. If it crosses the boundary, binary-search along the
+  // segment for the point where r == RS and use that as the clipped end.
+  function clipToHorizon(p1, p2) {
+    const r1 = p1.length(), r2 = p2.length();
+    const out1 = r1 >= RS, out2 = r2 >= RS;
+    if (out1 && out2) return [p1, p2];
+    if (!out1 && !out2) return null; // whole segment inside horizon — skip
+    const outside = out1 ? p1 : p2;
+    const inside = out1 ? p2 : p1;
+    let lo = 0, hi = 1; // t=0 at outside, t=1 at inside
+    for (let n = 0; n < 14; n++) {
+      const t = (lo + hi) / 2;
+      const x = outside.x + (inside.x - outside.x) * t;
+      const y = outside.y + (inside.y - outside.y) * t;
+      const z = outside.z + (inside.z - outside.z) * t;
+      if (Math.sqrt(x*x + y*y + z*z) > RS) lo = t; else hi = t;
+    }
+    const t = lo;
+    const surfacePt = new THREE.Vector3(
+      outside.x + (inside.x - outside.x) * t,
+      outside.y + (inside.y - outside.y) * t,
+      outside.z + (inside.z - outside.z) * t
+    );
+    return out1 ? [p1, surfacePt] : [surfacePt, p2];
+  }
   function addLine(p1, p2, col, opacity) {
-    const geo = new THREE.BufferGeometry().setFromPoints([p1, p2]);
+    const clipped = clipToHorizon(p1, p2);
+    if (!clipped) return;
+    const geo = new THREE.BufferGeometry().setFromPoints(clipped);
     const mat = new THREE.LineBasicMaterial({ color: col, transparent: true, opacity, depthWrite: false, blending: THREE.AdditiveBlending });
     group.add(new THREE.Line(geo, mat));
   }
@@ -1361,9 +1523,8 @@ scene.add(gridGroup);
 // where rs is the Schwarzschild radius. It is purely a function of r — no noise,
 // no artistic shaping, just that equation evaluated across a flat polar grid and
 // pushed downward (the conventional plotting direction for the "funnel" picture).
-function buildSpacetimeFunnel() {
+function buildSpacetimeFunnel(RS = 3.5) {
   const group = new THREE.Group();
-  const RS = 3.5;            // same Schwarzschild radius used by the rest of the sim
   const R_OUT = 26;          // outer radius of the sheet
   const RADIAL_DIVS = 64;
   const ANGULAR_DIVS = 96;
@@ -1383,10 +1544,6 @@ function buildSpacetimeFunnel() {
   // Build vertex grid in (radius, angle) space, mapped to x/z space, with the
   // throat (smallest r) as the DEEPEST point and the surface flattening toward
   // y=0 as r grows large — the correct physical shape of Flamm's paraboloid.
-  // (Previous version used y = -depthAt(r) directly: since depthAt(r) grows
-  // WITH r, that put the throat at y=0 and sent the outer rim furthest down —
-  // i.e. narrow at the top, flaring open at the bottom, the literal opposite
-  // of the intended funnel.)
   const maxDepth = depthAt(R_OUT);
   const verts = [];
   for (let i = 0; i <= RADIAL_DIVS; i++) {
@@ -1446,17 +1603,211 @@ function buildSpacetimeFunnel() {
   });
   group.add(new THREE.Line(rimGeo, rimMat));
 
+  // Open throat extension: continues the SAME curve past the rim instead of
+  // switching to a straight-walled cylinder. The paraboloid equation is only
+  // defined for r >= RS, so to keep going we extrapolate linearly along the
+  // curve's own tangent at r = RS (matching slope, not snapping to vertical),
+  // which reads as one continuous surface rather than two stacked objects.
+  const THROAT_EXTENSION_DIVS = 6;
+  const THROAT_EXTENSION_LEN = RS * 1.4; // how far past the rim to extrapolate
+  const throatBaseY = verts[0][0].y;     // rim's y (deepest sampled point)
+  // Walking inward in r past the throat isn't physically defined, so instead
+  // we extrapolate in the SAME (y, r-shrinking) direction the curve was
+  // already heading as r->RS: y keeps decreasing, radius keeps gently
+  // shrinking toward (but not through) RS, matching the curve's tangent.
+  const extraRows = [];
+  for (let t = 1; t <= THROAT_EXTENSION_DIVS; t++) {
+    const frac = t / THROAT_EXTENSION_DIVS;
+    const y = throatBaseY - frac * THROAT_EXTENSION_LEN;
+    // radius eases slightly inward then holds, continuing the inward pinch
+    // visually instead of stopping dead at RS — purely a tasteful taper,
+    // not claiming to be physically inside the horizon.
+    const r = RS * (1 - 0.12 * Math.sin(frac * Math.PI * 0.5));
+    const op = 0.8 * (1 - frac * 0.85);
+    const row = [];
+    for (let j = 0; j <= ANGULAR_DIVS; j++) {
+      const theta = (j / ANGULAR_DIVS) * Math.PI * 2;
+      row.push(new THREE.Vector3(r * Math.cos(theta), y, r * Math.sin(theta)));
+    }
+    extraRows.push({ row, y, r, op });
+    const pts = row.slice(); pts.push(pts[0]);
+    const geo = new THREE.BufferGeometry().setFromPoints(pts);
+    const mat = new THREE.LineBasicMaterial({
+      color: 0x9b78ff, transparent: true, opacity: op,
+      depthWrite: false, blending: THREE.AdditiveBlending,
+    });
+    group.add(new THREE.Line(geo, mat));
+  }
+  // Spokes connecting rim -> extension rows -> tip, following the same taper
+  // (not vertical), so the passage reads as a continuous tapering tube.
+  const THROAT_SPOKE_COUNT = 16;
+  for (let s = 0; s < THROAT_SPOKE_COUNT; s++) {
+    const jj = Math.round((s / THROAT_SPOKE_COUNT) * ANGULAR_DIVS);
+    const pts = [verts[0][jj]];
+    extraRows.forEach(er => pts.push(er.row[jj]));
+    const geo = new THREE.BufferGeometry().setFromPoints(pts);
+    const mat = new THREE.LineBasicMaterial({
+      color: 0x9b78ff, transparent: true, opacity: 0.35,
+      depthWrite: false, blending: THREE.AdditiveBlending,
+    });
+    group.add(new THREE.Line(geo, mat));
+  }
+
   // The diagram is a standalone side-view visualization, not part of the same
   // 3D world as the disk/horizon — without this offset its throat clips straight
   // through the accretion disk and event-horizon sphere, which is what made it
   // look broken (the only visible bit was buried behind/inside other objects).
   group.position.y = 6;
 
+  // Expose geometry metadata so funnel-mode jets/radiation can be positioned
+  // and rebuilt consistently when mass changes, without touching the 3D scene.
+  group.userData.RS = RS;
+  group.userData.throatY = throatBaseY;       // rim depth (local to group, before group.position.y offset)
+  group.userData.tipY = throatBaseY - THROAT_EXTENSION_LEN; // deepest visible point
+  group.userData.maxDepth = maxDepth;
+  group.userData.rOut = R_OUT;
+  group.userData.depthScale = DEPTH_SCALE;
+
   group.visible = false;
   return group;
 }
-const funnelGroup = buildSpacetimeFunnel();
+let funnelGroup = buildSpacetimeFunnel();
 scene.add(funnelGroup);
+
+// ─── FUNNEL MODE: independent state ──────────────────────────────────────────
+// Entirely separate from CFG (which drives the 3D scene). Funnel mode has its
+// own mass, rotation, and radiation/jet toggles, none of which read or write
+// CFG or any 3D-scene object (horizon, gridGroup, jetsGroup, hawkingPts, etc).
+const CFG_FUNNEL = {
+  RS: 3.5,
+  rotationSpeed: 0.20,
+  jetMergeDistance: 16, // world units along the jet where the two streams visually merge into one beam
+  showRadiation: false,
+  showJets: false,
+};
+
+// ─── FUNNEL MODE: RADIATION ───────────────────────────────────────────────────
+// Particles drifting outward up the funnel's own curved surface from the
+// throat — distinct from the 3D scene's spherical Hawking-radiation shell,
+// since here there's no sphere, just the rim of the embedding diagram.
+function buildFunnelRadiation(RS) {
+  const count = 1500;
+  const geo = new THREE.BufferGeometry();
+  const pos = new Float32Array(count * 3);
+  const theta0 = new Float32Array(count);   // fixed angular position
+  const life = new Float32Array(count);     // 0..1 progress climbing the funnel wall
+  const speed = new Float32Array(count);
+  const col = new Float32Array(count * 3);
+  for (let i = 0; i < count; i++) {
+    theta0[i] = Math.random() * Math.PI * 2;
+    life[i] = Math.random();
+    speed[i] = 0.15 + Math.random() * 0.25;
+    col[i*3] = 0.65 + Math.random()*0.3; col[i*3+1] = 0.55 + Math.random()*0.3; col[i*3+2] = 1.0;
+  }
+  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  geo.setAttribute('life', new THREE.BufferAttribute(life, 1));
+  geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  const mat = new THREE.PointsMaterial({
+    size: 0.14, vertexColors: true, transparent: true, opacity: 0.85,
+    blending: THREE.AdditiveBlending, depthWrite: false,
+  });
+  const pts = new THREE.Points(geo, mat);
+  pts.visible = false;
+  pts.userData = { theta0, life, speed, count, RS };
+  return pts;
+}
+let funnelRadiation = buildFunnelRadiation(CFG_FUNNEL.RS);
+funnelGroup.add(funnelRadiation);
+
+// ─── FUNNEL MODE: MERGING JETS ────────────────────────────────────────────────
+// Two bipolar jets spray outward from the throat opening (one toward +y "up"
+// out of the rim, one toward -y down through the open throat extension).
+// Each jet individually starts as a wide spiraling spray right at the throat
+// and narrows — converges — into a single coherent bright beam once it has
+// traveled past the jet-merge-distance threshold. Distinct from the 3D
+// scene's bipolar jets, which spawn from a sphere rather than a single-sided
+// rim opening.
+function buildFunnelJets(RS, mergeDist) {
+  const group = new THREE.Group();
+  const count = 2200;
+  const geo = new THREE.BufferGeometry();
+  const pos = new Float32Array(count * 3);
+  const life = new Float32Array(count);
+  const maxL = new Float32Array(count);
+  const seed = new Float32Array(count);
+  const side = new Float32Array(count); // -1 or 1, which of the two pre-merge streams
+  for (let i = 0; i < count; i++) {
+    life[i] = Math.random();
+    maxL[i] = 0.6 + Math.random() * 0.5;
+    seed[i] = Math.random() * 6.28;
+    side[i] = (i % 2 === 0) ? 1 : -1;
+  }
+  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  geo.setAttribute('life', new THREE.BufferAttribute(life, 1));
+  geo.setAttribute('maxLife', new THREE.BufferAttribute(maxL, 1));
+  geo.setAttribute('aSeed', new THREE.BufferAttribute(seed, 1));
+  geo.setAttribute('aSide', new THREE.BufferAttribute(side, 1));
+  const mat = new THREE.ShaderMaterial({
+    uniforms: { time: { value: 0 } },
+    vertexShader: `
+      attribute float life;
+      attribute float maxLife;
+      attribute float aSeed;
+      uniform float time;
+      varying float vLife;
+      void main() {
+        vLife = life / maxLife;
+        float fade = smoothstep(0.0, 0.1, vLife) * (1.0 - smoothstep(0.8, 1.0, vLife));
+        float shimmer = 0.9 + 0.1 * sin(time*4.0 + aSeed*3.14);
+        float sz = 1.6 * fade * shimmer;
+        vec4 mvPos = modelViewMatrix * vec4(position, 1.0);
+        gl_PointSize = sz * (260.0 / -mvPos.z);
+        gl_Position = projectionMatrix * mvPos;
+      }
+    `,
+    fragmentShader: `
+      varying float vLife;
+      void main() {
+        vec2 uv = gl_PointCoord - vec2(0.5);
+        float r = length(uv) * 2.0;
+        if (r > 1.0) discard;
+        float alpha = exp(-r*r*3.5);
+        vec3 col = mix(vec3(0.95,0.97,1.0), vec3(0.45,0.7,1.0), vLife);
+        float lifeFade = smoothstep(0.0,0.1,vLife) * (1.0 - smoothstep(0.8,1.0,vLife));
+        gl_FragColor = vec4(col, alpha * lifeFade * 0.85);
+      }
+    `,
+    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+  });
+  const pts = new THREE.Points(geo, mat);
+  pts.userData = { pos, life, maxL, seed, side, count, RS, mergeDist };
+  group.add(pts);
+  group.userData.jetParticles = pts;
+  group.visible = false;
+  return group;
+}
+let funnelJets = buildFunnelJets(CFG_FUNNEL.RS, CFG_FUNNEL.jetMergeDistance);
+funnelGroup.add(funnelJets);
+
+// Rebuilds the funnel diagram's geometry (and re-parents radiation/jets) when
+// mass changes — only touches funnelGroup/funnelRadiation/funnelJets, never
+// the 3D scene's gridGroup/horizon/etc.
+function rebuildFunnelForMass(RS) {
+  CFG_FUNNEL.RS = RS;
+  const wasVisible = funnelGroup.visible;
+  const radWasVisible = funnelRadiation.visible;
+  const jetsWasVisible = funnelJets.visible;
+  scene.remove(funnelGroup);
+  funnelGroup = buildSpacetimeFunnel(RS);
+  funnelGroup.visible = wasVisible;
+  scene.add(funnelGroup);
+  funnelRadiation = buildFunnelRadiation(RS);
+  funnelRadiation.visible = radWasVisible;
+  funnelGroup.add(funnelRadiation);
+  funnelJets = buildFunnelJets(RS, CFG_FUNNEL.jetMergeDistance);
+  funnelJets.visible = jetsWasVisible;
+  funnelGroup.add(funnelJets);
+}
 
 // ─── EVENT HORIZON ───────────────────────────────────────────────────────────
 const horizonGeo = new THREE.SphereGeometry(3.5, 128, 128);
@@ -1774,24 +2125,50 @@ function updatePhotonSphereScale(ratio) {
 }
 
 // ─── CAMERA ORBIT ────────────────────────────────────────────────────────────
+// Two completely independent camera states — 3D scene and funnel diagram never
+// share theta/phi/R/lookY. Whichever mode is active owns the canvas input.
 let isDragging=false, prevMouse={x:0,y:0};
-let camTheta=0.3, camPhi=1.22, camR=38; // camPhi closer to equatorial plane (~70° from vertical) for edge-on embedded look
-let funnelLookY = -2; // camera look-target y; shifts when the embedding funnel diagram is shown
+
+// 3D scene camera state
+let camTheta=0.3, camPhi=1.22, camR=38;
+const CAM3D_LOOK_Y = -2; // fixed look-target for 3D scene
+
+// Funnel-mode camera state — completely isolated, never touched by 3D code paths
+const FUNNEL_CAM = { theta: 0.3, phi: 1.3, R: 42, lookY: 0 };
+
 canvas.addEventListener('mousedown', e=>{isDragging=true; prevMouse={x:e.clientX,y:e.clientY};});
 canvas.addEventListener('mouseup', ()=>isDragging=false);
 canvas.addEventListener('mousemove', e=>{
   if(!isDragging) return;
-  camTheta+=(e.clientX-prevMouse.x)*0.007;
-  camPhi=Math.max(0.1,Math.min(Math.PI-0.1,camPhi+(e.clientY-prevMouse.y)*0.007));
+  const dx=(e.clientX-prevMouse.x)*0.007, dy=(e.clientY-prevMouse.y)*0.007;
+  if (CFG.showFunnel) {
+    FUNNEL_CAM.theta += dx;
+    FUNNEL_CAM.phi = Math.max(0.1, Math.min(Math.PI-0.1, FUNNEL_CAM.phi + dy));
+  } else {
+    camTheta += dx;
+    camPhi = Math.max(0.1, Math.min(Math.PI-0.1, camPhi + dy));
+  }
   prevMouse={x:e.clientX,y:e.clientY};
 });
-canvas.addEventListener('wheel', e=>{ camR=Math.max(8,Math.min(120,camR+e.deltaY*0.04)); },{passive:true});
+canvas.addEventListener('wheel', e=>{
+  if (CFG.showFunnel) {
+    FUNNEL_CAM.R = Math.max(18, Math.min(120, FUNNEL_CAM.R + e.deltaY * 0.04));
+  } else {
+    camR = Math.max(8, Math.min(120, camR + e.deltaY * 0.04));
+  }
+},{passive:true});
 let prevTouch=null;
 canvas.addEventListener('touchstart', e=>{prevTouch={x:e.touches[0].clientX,y:e.touches[0].clientY};},{passive:true});
 canvas.addEventListener('touchmove', e=>{
   if(!prevTouch) return;
-  camTheta+=(e.touches[0].clientX-prevTouch.x)*0.008;
-  camPhi=Math.max(0.1,Math.min(Math.PI-0.1,camPhi+(e.touches[0].clientY-prevTouch.y)*0.008));
+  const dx=(e.touches[0].clientX-prevTouch.x)*0.008, dy=(e.touches[0].clientY-prevTouch.y)*0.008;
+  if (CFG.showFunnel) {
+    FUNNEL_CAM.theta += dx;
+    FUNNEL_CAM.phi = Math.max(0.1, Math.min(Math.PI-0.1, FUNNEL_CAM.phi + dy));
+  } else {
+    camTheta += dx;
+    camPhi = Math.max(0.1, Math.min(Math.PI-0.1, camPhi + dy));
+  }
   prevTouch={x:e.touches[0].clientX,y:e.touches[0].clientY};
 },{passive:true});
 
@@ -1941,11 +2318,12 @@ bindOverlay('btn-lens','showLens',lensingGroup);
 bindOverlay('btn-jets','showJets',jetsGroup);
 bindOverlay('btn-hawking','showHawking',hawkingPts);
 
-// ─── UI: CAMERA PRESETS ──────────────────────────────────────────────────────
+// ─── UI: CAMERA PRESETS (3D scene only — never runs in funnel mode) ──────────
 let autoOrbitActive = false;
-let camTween = null; // {fromPhi, toPhi, fromTheta, toTheta, start, duration}
+let camTween = null; // {fromPhi, toPhi, start, duration}
 
 function tweenCameraTo(targetPhi, targetTheta) {
+  // Only tweens the 3D scene camera. Funnel camera (FUNNEL_CAM) is never tweened.
   camTween = {
     fromPhi: camPhi, toPhi: targetPhi,
     fromTheta: camTheta, toTheta: targetTheta,
@@ -1968,12 +2346,10 @@ document.getElementById('btn-cam-orbit').addEventListener('click', (e) => {
   e.currentTarget.classList.toggle('active', autoOrbitActive);
 });
 
-// The embedding funnel is a standalone side-view diagram, not a layer that
-// composites with the 3D black hole scene — showing both at once is what made
-// it look "broken" (the disk and horizon sphere visually buried it). Toggling
-// it now swaps the main scene out and frames the camera on the diagram instead.
 const btnFunnelRow = document.getElementById('btn-funnel');
-let preFunnelCamR = camR, preFunnelPhi = camPhi, preFunnelTheta = camTheta;
+const secParamsWrap = document.getElementById('sec-params-wrap');
+const secFunnelModeWrap = document.getElementById('sec-funnel-mode-wrap');
+const funnelOnly3dRowIds = ['btn-grid', 'btn-lens', 'btn-jets', 'btn-hawking'];
 btnFunnelRow.addEventListener('click', () => {
   CFG.showFunnel = !CFG.showFunnel;
   btnFunnelRow.classList.toggle('active', CFG.showFunnel);
@@ -1983,30 +2359,112 @@ btnFunnelRow.addEventListener('click', () => {
   coronaMesh.visible = !CFG.showFunnel;
   glowRing1.visible = !CFG.showFunnel;
   diskGroup.visible = !CFG.showFunnel;
+  rsIndicator.visible = !CFG.showFunnel;
+  photonSphere.visible = !CFG.showFunnel;
   gridGroup.visible = !CFG.showFunnel && CFG.showGrid;
   lensingGroup.visible = !CFG.showFunnel && CFG.showLens;
   jetsGroup.visible = !CFG.showFunnel && CFG.showJets;
   hawkingPts.visible = !CFG.showFunnel && CFG.showHawking;
 
+  // Hide the crosshair HUD element — it belongs to the 3D scene aiming reticle,
+  // not to the funnel diagram which has no "centre to aim at".
+  document.getElementById('crosshair').style.display = CFG.showFunnel ? 'none' : '';
+  document.getElementById('crosshair-dot').style.display = CFG.showFunnel ? 'none' : '';
+
+  // Panel swap: funnel mode gets its OWN controls, fully separate from CFG.
+  secParamsWrap.style.display = CFG.showFunnel ? 'none' : '';
+  secFunnelModeWrap.style.display = CFG.showFunnel ? '' : 'none';
+  document.getElementById('sec-camera-wrap').style.display = CFG.showFunnel ? 'none' : '';
+  funnelOnly3dRowIds.forEach(id => {
+    document.getElementById(id).style.display = CFG.showFunnel ? 'none' : '';
+  });
+  // Funnel mode's own radiation/jets visuals shouldn't carry over a stale
+  // "on" state from a previous visit silently in the background — but we
+  // DO want them to persist across toggles within funnel mode, so we only
+  // sync visibility (not reset the toggles) here.
+  funnelRadiation.visible = CFG.showFunnel && CFG_FUNNEL.showRadiation;
+  funnelJets.visible = CFG.showFunnel && CFG_FUNNEL.showJets;
+
   if (CFG.showFunnel) {
-    preFunnelCamR = camR; preFunnelPhi = camPhi; preFunnelTheta = camTheta;
+    // Stop 3D auto-orbit so it doesn't bleed into funnel mode
     autoOrbitActive = false;
     document.getElementById('btn-cam-orbit').classList.remove('active');
-    // A grazing, near-equatorial view shows the true side-on silhouette of the
-    // bowl — throat far/up, rim near/down — which is the correct, unambiguous
-    // read. (A steep overhead angle was tried and made it look inverted instead:
-    // looking straight down the throat, perspective makes the far rim of the
-    // opening appear to flare outward as it descends, the opposite of the
-    // intended look.)
-    camR = 42;
-    funnelLookY = 0;
-    tweenCameraTo(1.3, camTheta);
-  } else {
-    camR = preFunnelCamR;
-    funnelLookY = -2;
-    tweenCameraTo(preFunnelPhi, preFunnelTheta);
+    // Funnel camera is already set in FUNNEL_CAM — no need to save/restore
+    // the 3D camera state. The animate loop reads FUNNEL_CAM when showFunnel=true.
   }
+  // 3D camera state (camR/camPhi/camTheta) is left completely untouched — it
+  // will resume exactly where it was when the funnel mode is turned off.
 });
+
+// ─── FUNNEL MODE: UI bindings (fully independent of CFG/3D-scene sliders) ───
+const fMassSlider = document.getElementById('sl-fmass');
+const fMassValLabel = document.getElementById('vl-fmass');
+const fMassFill = document.getElementById('sf-fmass');
+function updateFunnelMass(sliderVal) {
+  // Same log-scale mapping style as the 3D scene's mass slider, but drives
+  // CFG_FUNNEL.RS / a full geometry rebuild instead of CFG.rsScale.
+  const t = (sliderVal - 1) / 99;
+  const massSolar = Math.pow(10, 5 + t * 2); // 1e5 .. 1e7, matches 3D scene's range
+  const massLabel = massSolar >= 1e6
+    ? (massSolar/1e6).toFixed(2) + 'M\u2609\xd710\u2076'
+    : (massSolar/1e5).toFixed(2) + 'M\u2609\xd710\u2075';
+  fMassValLabel.textContent = massLabel;
+  fMassFill.style.width = sliderVal + '%';
+  // RS scales linearly with mass (Schwarzschild radius proportional to M).
+  // 3.5 was the scene-unit radius at the slider's default midpoint (massSolar = 1e6).
+  const RS = 3.5 * (massSolar / 1e6);
+  rebuildFunnelForMass(RS);
+
+  // Reframe the funnel camera so the whole diagram stays centered and in-view
+  // regardless of how large/small the throat grows. The funnel's world-space
+  // vertical center sits at group.position.y (6) minus half the throat depth,
+  // which grows with RS. We target the midpoint of that range.
+  const DEPTH_SCALE = 0.55, R_OUT = 26;
+  const maxDepth = 2 * Math.sqrt(RS * (R_OUT - RS)) * DEPTH_SCALE;
+  // Group is offset +6 in Y; throat (deepest point) is at 6 + (0 - maxDepth) = 6 - maxDepth
+  // Rim (shallowest point) is at 6 + (maxDepth - maxDepth) = 6
+  const funnelWorldTop = 6;
+  const funnelWorldBottom = 6 - maxDepth;
+  FUNNEL_CAM.lookY = (funnelWorldTop + funnelWorldBottom) / 2; // vertical midpoint
+  // Distance: large enough to see the full bowl width (R_OUT * 2) plus some margin
+  const neededR = Math.max(R_OUT * 2.2 + RS * 3, 42);
+  FUNNEL_CAM.R = Math.min(neededR, 120);
+}
+fMassSlider.addEventListener('input', () => updateFunnelMass(parseFloat(fMassSlider.value)));
+
+const fSpinSlider = document.getElementById('sl-fspin');
+const fSpinValLabel = document.getElementById('vl-fspin');
+const fSpinFill = document.getElementById('sf-fspin');
+fSpinSlider.addEventListener('input', () => {
+  CFG_FUNNEL.rotationSpeed = parseFloat(fSpinSlider.value) * 0.01;
+  fSpinValLabel.textContent = fSpinSlider.value;
+  fSpinFill.style.width = fSpinSlider.value + '%';
+});
+
+const fJetMergeSlider = document.getElementById('sl-fjetmerge');
+const fJetMergeValLabel = document.getElementById('vl-fjetmerge');
+const fJetMergeFill = document.getElementById('sf-fjetmerge');
+fJetMergeSlider.addEventListener('input', () => {
+  CFG_FUNNEL.jetMergeDistance = parseFloat(fJetMergeSlider.value) * 0.5; // 2.5..50 world units
+  fJetMergeValLabel.textContent = fJetMergeSlider.value;
+  fJetMergeFill.style.width = fJetMergeSlider.value + '%';
+  funnelJets.userData.jetParticles.userData.mergeDist = CFG_FUNNEL.jetMergeDistance;
+});
+
+const btnFRadiation = document.getElementById('btn-fradiation');
+btnFRadiation.addEventListener('click', () => {
+  CFG_FUNNEL.showRadiation = !CFG_FUNNEL.showRadiation;
+  btnFRadiation.classList.toggle('active', CFG_FUNNEL.showRadiation);
+  funnelRadiation.visible = CFG_FUNNEL.showRadiation;
+});
+
+const btnFJets = document.getElementById('btn-fjets');
+btnFJets.addEventListener('click', () => {
+  CFG_FUNNEL.showJets = !CFG_FUNNEL.showJets;
+  btnFJets.classList.toggle('active', CFG_FUNNEL.showJets);
+  funnelJets.visible = CFG_FUNNEL.showJets;
+});
+
 
 // ─── UI: DROP OBJECT ─────────────────────────────────────────────────────────
 document.getElementById('btn-drop').addEventListener('click', () => {
@@ -2044,40 +2502,47 @@ document.getElementById('btn-drop').addEventListener('click', () => {
   const HISTORY_LEN = 40;
 
   let angle = Math.random()*Math.PI*2, radius = 20;
+  // In funnel mode, offset starting angle by current group rotation so the
+  // object begins on the funnel surface and appears to co-rotate with it.
+  if (CFG.showFunnel) angle += (CFG_FUNNEL._groupTheta || 0);
   const startTime = performance.now();
 
-  // Funnel-frame helpers (mirrors buildSpacetimeFunnel constants)
-  const FUNNEL_RS = 3.5, FUNNEL_R_OUT = 26, FUNNEL_DEPTH_SCALE = 0.55, FUNNEL_Y_OFFSET = 6;
-  function funnelDepthAt(r) {
-    const rc = Math.max(r, FUNNEL_RS);
-    return 2 * Math.sqrt(FUNNEL_RS * (rc - FUNNEL_RS)) * FUNNEL_DEPTH_SCALE;
+  // Shared funnel geometry constants — must match buildSpacetimeFunnel exactly.
+  // Used when CFG.showFunnel is true to place the object on the paraboloid surface.
+  const F_RS_DEFAULT = 3.5, F_R_OUT = 26, F_DEPTH_SCALE = 0.55, F_GROUP_Y = 6;
+  function fDepthAt(RS, r) {
+    return 2 * Math.sqrt(RS * (Math.max(r, RS) - RS)) * F_DEPTH_SCALE;
   }
-  const funnelMaxDepth = funnelDepthAt(FUNNEL_R_OUT);
-  function getFunnelPos(r, a) {
-    // map r to funnel surface: throat is deepest, rim is at y=FUNNEL_Y_OFFSET
-    const y = FUNNEL_Y_OFFSET + (funnelDepthAt(r) - funnelMaxDepth);
-    return new THREE.Vector3(Math.cos(a) * r, y, Math.sin(a) * r);
+  function fWorldPos(RS, r, a) {
+    // Returns world-space position on the paraboloid surface for radius r, angle a.
+    const maxDepth = fDepthAt(RS, F_R_OUT);
+    const localY = fDepthAt(RS, r) - maxDepth; // throat = -maxDepth, rim = 0
+    return new THREE.Vector3(r * Math.cos(a), localY + F_GROUP_Y, r * Math.sin(a));
   }
 
   function spiralIn() {
     const t2 = Math.min(1, (performance.now()-startTime)/4000);
     radius = 20*(1-t2*0.98); angle += 0.1+t2*0.1;
+
     let pos, activeRadius;
     if (CFG.showFunnel) {
-      // In funnel mode: drop radially inward along the paraboloid surface.
-      // Keep angle fixed (straight spoke) so the path is clearly visible on the diagram.
-      activeRadius = FUNNEL_RS + (FUNNEL_R_OUT - FUNNEL_RS) * (1 - t2);
-      pos = getFunnelPos(activeRadius, angle);
+      // Map t2 onto the funnel: start at the rim (R_OUT), end at the throat (RS).
+      const RS = CFG_FUNNEL.RS;
+      activeRadius = RS + (F_R_OUT - RS) * (1 - t2);
+      pos = fWorldPos(RS, activeRadius, angle);
     } else {
       activeRadius = radius;
-      pos = new THREE.Vector3(Math.cos(angle)*radius, 0.3*(1-t2), Math.sin(angle)*radius);
+      pos = new THREE.Vector3(Math.cos(angle)*activeRadius, 0.3*(1-t2), Math.sin(angle)*activeRadius);
     }
     tip.position.copy(pos);
 
-    // Tidal force ~ 1/r^3: grows sharply as radius approaches r_s.
-    const proximity = Math.max(0, 1 - (activeRadius - RS_SCENE) / (20 - RS_SCENE)); // 0 far away, 1 at horizon
-    const stretchLen = 0.6 + Math.pow(proximity, 4) * 9; // how far back along the path the strand reaches
-    const tidalSquish = Math.max(0.035, 0.16 / Math.sqrt(1 + stretchLen)); // thinner as it stretches
+    // Horizon and tidal spread use the current mode's reference radius.
+    const RS_REF = CFG.showFunnel ? CFG_FUNNEL.RS : RS_SCENE;
+    const startR  = CFG.showFunnel ? F_R_OUT : 20;
+    // proximity: 0 far away at rim/start, 1 at the throat/horizon
+    const proximity = Math.max(0, 1 - (activeRadius - RS_REF) / (startR - RS_REF));
+    const stretchLen = 0.6 + Math.pow(proximity, 4) * 9;
+    const tidalSquish = Math.max(0.035, 0.16 / Math.sqrt(1 + stretchLen));
 
     // Track the real path so the strand can curve along actual recent motion, not a straight guess.
     pathHistory.push(pos.clone());
@@ -2106,8 +2571,8 @@ document.getElementById('btn-drop').addEventListener('click', () => {
     strandMat.color.setRGB(1.0, 1.0 - heat*0.55, 1.0 - heat*0.85);
     tip.material.color.setRGB(1.0, 0.95 - heat*0.5, 0.85 - heat*0.8);
 
-    // Fade only at the very end (after crossing the horizon), not throughout the fall.
-    const fadeOut = activeRadius < RS_SCENE * 1.05 ? Math.max(0, (activeRadius - RS_SCENE*0.3) / (RS_SCENE*0.75)) : 1;
+    // Fade only at the very end (after crossing the throat/horizon).
+    const fadeOut = activeRadius < RS_REF * 1.05 ? Math.max(0, (activeRadius - RS_REF*0.3) / (RS_REF*0.75)) : 1;
     strandMat.opacity = fadeOut;
     tip.material.opacity = fadeOut;
 
@@ -2192,35 +2657,37 @@ document.getElementById('btn-drop').addEventListener('click', () => {
     const pathHistory = [];
     const HISTORY_LEN = 40;
     let angle = Math.random()*Math.PI*2, radius = 20;
+    if (CFG.showFunnel) angle += (CFG_FUNNEL._groupTheta || 0);
     const startTime = performance.now();
     const DURATION = 4200;
 
-    // Funnel-frame helpers (mirrors buildSpacetimeFunnel constants)
-    const FILE_FUNNEL_RS = 3.5, FILE_FUNNEL_R_OUT = 26, FILE_FUNNEL_DEPTH_SCALE = 0.55, FILE_FUNNEL_Y_OFFSET = 6;
-    function fileFunnelDepthAt(r) {
-      const rc = Math.max(r, FILE_FUNNEL_RS);
-      return 2 * Math.sqrt(FILE_FUNNEL_RS * (rc - FILE_FUNNEL_RS)) * FILE_FUNNEL_DEPTH_SCALE;
-    }
-    const fileFunnelMaxDepth = fileFunnelDepthAt(FILE_FUNNEL_R_OUT);
-    function getFileFunnelPos(r, a) {
-      const y = FILE_FUNNEL_Y_OFFSET + (fileFunnelDepthAt(r) - fileFunnelMaxDepth);
-      return new THREE.Vector3(Math.cos(a) * r, y, Math.sin(a) * r);
+    // Shared funnel geometry constants matching buildSpacetimeFunnel exactly.
+    const F_RS_DEF = 3.5, F_R_OUT_F = 26, F_DS_F = 0.55, F_GY_F = 6;
+    function fDepthAtF(RS, r) { return 2 * Math.sqrt(RS * (Math.max(r, RS) - RS)) * F_DS_F; }
+    function fWorldPosF(RS, r, a) {
+      const maxD = fDepthAtF(RS, F_R_OUT_F);
+      return new THREE.Vector3(r * Math.cos(a), (fDepthAtF(RS, r) - maxD) + F_GY_F, r * Math.sin(a));
     }
 
+    // The file TDE follows the funnel surface in funnel mode, the 3D scene otherwise.
     function spiralInFile() {
       const t2 = Math.min(1, (performance.now()-startTime)/DURATION);
       radius = 20*(1-t2*0.98); angle += 0.1+t2*0.1;
+
       let pos, activeRadius;
       if (CFG.showFunnel) {
-        activeRadius = FILE_FUNNEL_RS + (FILE_FUNNEL_R_OUT - FILE_FUNNEL_RS) * (1 - t2);
-        pos = getFileFunnelPos(activeRadius, angle);
+        const RS = CFG_FUNNEL.RS;
+        activeRadius = RS + (F_R_OUT_F - RS) * (1 - t2);
+        pos = fWorldPosF(RS, activeRadius, angle);
       } else {
         activeRadius = radius;
-        pos = new THREE.Vector3(Math.cos(angle)*radius, 0.3*(1-t2), Math.sin(angle)*radius);
+        pos = new THREE.Vector3(Math.cos(angle)*activeRadius, 0.3*(1-t2), Math.sin(angle)*activeRadius);
       }
       tip.position.copy(pos);
 
-      const proximity = Math.max(0, 1 - (activeRadius - RS_SCENE) / (20 - RS_SCENE));
+      const RS_REF = CFG.showFunnel ? CFG_FUNNEL.RS : RS_SCENE;
+      const startR  = CFG.showFunnel ? F_R_OUT_F : 20;
+      const proximity = Math.max(0, 1 - (activeRadius - RS_REF) / (startR - RS_REF));
       const stretchLen = 0.6 + Math.pow(proximity, 4) * 9;
       const tidalSquish = Math.max(0.035, 0.16 / Math.sqrt(1 + stretchLen));
 
@@ -2248,7 +2715,7 @@ document.getElementById('btn-drop').addEventListener('click', () => {
       strandMat.color.setRGB(1.0 - heat*0.4, 1.0, 0.85 + heat*0.15);
       tip.material.color.setRGB(0.75+heat*0.25, 1.0, 0.92);
 
-      const fadeOut = activeRadius < RS_SCENE*1.05 ? Math.max(0, (activeRadius - RS_SCENE*0.3)/(RS_SCENE*0.75)) : 1;
+      const fadeOut = activeRadius < RS_REF*1.05 ? Math.max(0, (activeRadius - RS_REF*0.3)/(RS_REF*0.75)) : 1;
       strandMat.opacity = fadeOut;
       tip.material.opacity = fadeOut;
 
@@ -2282,11 +2749,23 @@ document.getElementById('btn-drop').addEventListener('click', () => {
     const geo = new THREE.BufferGeometry();
     const pos = new Float32Array(count*3);
     const vel = [];
+    // In funnel mode spawn the burst at the throat's world position, not at the
+    // 3D horizon sphere — so the visual beat appears in the right place.
+    const burstR = CFG.showFunnel ? CFG_FUNNEL.RS * 1.05 : 3.6;
+    const burstY = CFG.showFunnel ? 6 - (2 * Math.sqrt(CFG_FUNNEL.RS * (26 - CFG_FUNNEL.RS)) * 0.55) : 0;
     for (let i = 0; i < count; i++) {
       const th = Math.random()*Math.PI*2, ph = Math.acos(2*Math.random()-1);
-      pos[i*3] = 3.6*Math.sin(ph)*Math.cos(th);
-      pos[i*3+1] = 3.6*Math.sin(ph)*Math.sin(th);
-      pos[i*3+2] = 3.6*Math.cos(ph);
+      if (CFG.showFunnel) {
+        // Burst ring around the throat rim
+        const a = Math.random() * Math.PI * 2;
+        pos[i*3]   = burstR * Math.cos(a);
+        pos[i*3+1] = burstY + (Math.random()-0.5) * 0.5;
+        pos[i*3+2] = burstR * Math.sin(a);
+      } else {
+        pos[i*3] = 3.6*Math.sin(ph)*Math.cos(th);
+        pos[i*3+1] = 3.6*Math.sin(ph)*Math.sin(th);
+        pos[i*3+2] = 3.6*Math.cos(ph);
+      }
       vel.push(new THREE.Vector3(pos[i*3],pos[i*3+1],pos[i*3+2]).normalize().multiplyScalar(0.04+Math.random()*0.06));
     }
     geo.setAttribute('position', new THREE.BufferAttribute(pos,3));
@@ -2439,39 +2918,39 @@ document.getElementById('btn-tde').addEventListener('click', () => {
 
   // Approach: near-parabolic infall from far away, on a fixed orbital plane with some tilt.
   const approachAngle = Math.random() * Math.PI * 2;
-  let angle = approachAngle;
+  let angle = approachAngle + (CFG.showFunnel ? (CFG_FUNNEL._groupTheta || 0) : 0);
   let radius = 34;
   const startTime = performance.now();
   const DURATION = 7000;
 
-  // Funnel-frame helpers for TDE (mirrors buildSpacetimeFunnel constants)
-  const TDE_FUNNEL_RS = 3.5, TDE_FUNNEL_R_OUT = 26, TDE_FUNNEL_DEPTH_SCALE = 0.55, TDE_FUNNEL_Y_OFFSET = 6;
-  function tdeFunnelDepthAt(r) {
-    const rc = Math.max(r, TDE_FUNNEL_RS);
-    return 2 * Math.sqrt(TDE_FUNNEL_RS * (rc - TDE_FUNNEL_RS)) * TDE_FUNNEL_DEPTH_SCALE;
-  }
-  const tdeFunnelMaxDepth = tdeFunnelDepthAt(TDE_FUNNEL_R_OUT);
-  function getTdeFunnelPos(r, a) {
-    const y = TDE_FUNNEL_Y_OFFSET + (tdeFunnelDepthAt(r) - tdeFunnelMaxDepth);
-    return new THREE.Vector3(Math.cos(a) * r, y, Math.sin(a) * r);
+  // TDE always runs in the 3D scene regardless of view mode.
+  // In funnel mode the star rides the paraboloid surface — same coordinates as
+  // the funnel diagram itself — so it looks like it's truly spiraling into the throat.
+
+  // Funnel geometry constants matching buildSpacetimeFunnel exactly.
+  const F_R_OUT_T = 26, F_DS_T = 0.55, F_GY_T = 6;
+  function fDepthAtT(RS, r) { return 2 * Math.sqrt(RS * (Math.max(r, RS) - RS)) * F_DS_T; }
+  function fWorldPosT(RS, r, a) {
+    const maxD = fDepthAtT(RS, F_R_OUT_T);
+    return new THREE.Vector3(r * Math.cos(a), (fDepthAtT(RS, r) - maxD) + F_GY_T, r * Math.sin(a));
   }
 
   function animateTDE() {
     const elapsed = performance.now() - startTime;
     const p = Math.min(1, elapsed / DURATION);
 
-    // Curved infall path (same spiral form already proven for the drop-object feature),
-    // slower start, accelerating in — gives the star a real curved trajectory to spaghettify along.
     radius = 34 * (1 - Math.pow(p, 1.7) * 0.97) + RS_SCENE * 0.5;
     angle += 0.035 + p * 0.05;
+
     let pos, activeRadius;
     if (CFG.showFunnel) {
-      // In funnel mode: slide the star radially inward along the paraboloid surface.
-      activeRadius = TDE_FUNNEL_RS + (TDE_FUNNEL_R_OUT - TDE_FUNNEL_RS) * Math.max(0, 1 - Math.pow(p, 1.7) * 0.97);
-      pos = getTdeFunnelPos(activeRadius, angle);
+      const RS = CFG_FUNNEL.RS;
+      // Map from outer rim inward to the throat; start slightly outside R_OUT for drama
+      activeRadius = RS + (F_R_OUT_T - RS) * Math.max(0, 1 - Math.pow(p, 1.7) * 0.97);
+      pos = fWorldPosT(RS, activeRadius, angle);
     } else {
       activeRadius = radius;
-      pos = new THREE.Vector3(Math.cos(angle) * radius, 0.4 * (1 - p) * Math.sin(p * 3.0), Math.sin(angle) * radius);
+      pos = new THREE.Vector3(Math.cos(angle) * activeRadius, 0.4 * (1 - p) * Math.sin(p * 3.0), Math.sin(angle) * activeRadius);
     }
 
     star.position.copy(pos);
@@ -2490,8 +2969,11 @@ document.getElementById('btn-tde').addEventListener('click', () => {
     if (pathHistory.length > HISTORY_LEN) pathHistory.shift();
 
     // Tidal proximity: 0 far away, 1 once deep past the tidal radius.
-    const proximity = Math.max(0, Math.min(1, 1 - (activeRadius - RS_SCENE) / (R_TIDAL - RS_SCENE)));
-    const disrupted = activeRadius <= R_TIDAL;
+    // In funnel mode use the funnel's own RS so the disruption onset matches the throat size.
+    const RS_TDE = CFG.showFunnel ? CFG_FUNNEL.RS : RS_SCENE;
+    const R_TIDAL_ACTIVE = RS_TDE * 4;
+    const proximity = Math.max(0, Math.min(1, 1 - (activeRadius - RS_TDE) / (R_TIDAL_ACTIVE - RS_TDE)));
+    const disrupted = activeRadius <= R_TIDAL_ACTIVE;
 
     if (disrupted) {
       // The star itself shrinks as it converts into stream material — its remaining
@@ -2557,22 +3039,30 @@ function animate() {
     fpsDom.textContent = (frameCount/((performance.now()-lastFPS)/1000)).toFixed(0)+' fps';
     frameCount=0; lastFPS=performance.now();
   }
-  // Smooth camera preset tween
-  if (camTween) {
+  // Smooth camera preset tween (3D scene only — never runs in funnel mode)
+  if (camTween && !CFG.showFunnel) {
     const elapsed = performance.now() - camTween.start;
     const p = Math.min(1, elapsed / camTween.duration);
     const ease = p < 0.5 ? 2*p*p : 1 - Math.pow(-2*p+2, 2)/2; // ease-in-out
     camPhi = camTween.fromPhi + (camTween.toPhi - camTween.fromPhi) * ease;
     if (p >= 1) camTween = null;
   }
-  // Auto-orbit: slowly rotate theta when active and not manually dragging
-  if (autoOrbitActive && !isDragging) {
+  // Auto-orbit: slowly rotate theta when active and not manually dragging (3D only)
+  if (autoOrbitActive && !isDragging && !CFG.showFunnel) {
     camTheta += 0.0035;
   }
-  camera.position.x = camR*Math.sin(camPhi)*Math.cos(camTheta);
-  camera.position.y = camR*Math.cos(camPhi);
-  camera.position.z = camR*Math.sin(camPhi)*Math.sin(camTheta);
-  camera.lookAt(0,funnelLookY,0);
+  // Apply the correct camera for whichever mode is active
+  if (CFG.showFunnel) {
+    camera.position.x = FUNNEL_CAM.R*Math.sin(FUNNEL_CAM.phi)*Math.cos(FUNNEL_CAM.theta);
+    camera.position.y = FUNNEL_CAM.R*Math.cos(FUNNEL_CAM.phi);
+    camera.position.z = FUNNEL_CAM.R*Math.sin(FUNNEL_CAM.phi)*Math.sin(FUNNEL_CAM.theta);
+    camera.lookAt(0, FUNNEL_CAM.lookY, 0);
+  } else {
+    camera.position.x = camR*Math.sin(camPhi)*Math.cos(camTheta);
+    camera.position.y = camR*Math.cos(camPhi);
+    camera.position.z = camR*Math.sin(camPhi)*Math.sin(camTheta);
+    camera.lookAt(0, CAM3D_LOOK_Y, 0);
+  }
   const spinSpeed = CFG.spinSpeed*0.012;
   diskGroup.children.forEach(child => {
     if(child.userData.isDiskShader) {
@@ -2651,6 +3141,74 @@ function animate() {
     jetPts.geometry.attributes.maxLife.needsUpdate  = true;
   }
   horizon.material.color.setHSL(0,0,0.002*Math.sin(t*5));
+
+  // --- FUNNEL MODE updates (independent of the 3D scene above) --------------
+  if (funnelGroup.visible) {
+    // Accumulate rotation angle independently, bake it into the group transform.
+    // Radiation/jet particles are children of funnelGroup and live in LOCAL space,
+    // so the group rotation carries them around correctly without any double-transform.
+    CFG_FUNNEL._groupTheta = (CFG_FUNNEL._groupTheta || 0) + CFG_FUNNEL.rotationSpeed * 0.012;
+    funnelGroup.rotation.y = CFG_FUNNEL._groupTheta;
+
+    if (funnelRadiation.visible) {
+      const { theta0, life, speed, count, RS } = funnelRadiation.userData;
+      const pos = funnelRadiation.geometry.attributes.position.array;
+      const rOut = funnelGroup.userData.rOut;
+      const maxDepth = funnelGroup.userData.maxDepth;
+      const DEPTH_SCALE = funnelGroup.userData.depthScale;
+      // Positions written in LOCAL group space - group rotation handles world-space spin.
+      for (let i = 0; i < count; i++) {
+        life[i] += speed[i] * 0.01;
+        if (life[i] > 1) life[i] = 0;
+        const r = RS + (rOut - RS) * life[i];
+        const rc = Math.max(r, RS);
+        const y = 2 * Math.sqrt(RS * (rc - RS)) * DEPTH_SCALE - maxDepth;
+        const theta = theta0[i] + life[i] * 1.4;
+        pos[i*3]   = r * Math.cos(theta);
+        pos[i*3+1] = y;
+        pos[i*3+2] = r * Math.sin(theta);
+      }
+      funnelRadiation.geometry.attributes.position.needsUpdate = true;
+      funnelRadiation.geometry.attributes.life.needsUpdate = true;
+    }
+
+    if (funnelJets.visible) {
+      const jetPts = funnelJets.userData.jetParticles;
+      const { pos, life, maxL, count: jCount, RS, mergeDist } = jetPts.userData;
+      jetPts.material.uniforms.time.value = t;
+      const throatY = funnelGroup.userData.throatY;
+
+      // Fixed travel distance always long enough to show a full beam past the merge point.
+      // mergeDist ONLY controls WHERE the wide spray collapses into a tight column,
+      // not how far particles fly. This makes the slider meaningful at any value.
+      const TRAVEL = Math.max(mergeDist * 2.2, RS * 5.5);
+
+      for (let i = 0; i < jCount; i++) {
+        life[i] += 0.012;
+        if (life[i] >= maxL[i]) {
+          life[i] = 0;
+          maxL[i] = 0.6 + Math.random() * 0.5;
+        }
+        const frac = life[i] / maxL[i];
+        const dist = frac * TRAVEL;
+        // smoothstep so the spray-to-beam collapse is gradual, not a hard snap
+        const mt = Math.min(1, dist / Math.max(mergeDist, 0.1));
+        const smoothMerge = mt * mt * (3 - 2 * mt);
+        const side = jetPts.userData.side[i];
+        const spiralAngle = frac * 8.0 + i * 0.001;
+        const radialOffset = (1 - smoothMerge) * RS * 0.7;
+        // Positions in LOCAL group space - group rotation handles world-space spin.
+        const x = Math.cos(spiralAngle) * radialOffset;
+        const z = Math.sin(spiralAngle) * radialOffset;
+        const y = throatY + side * dist;
+        pos[i*3] = x; pos[i*3+1] = y; pos[i*3+2] = z;
+      }
+      jetPts.geometry.attributes.position.needsUpdate = true;
+      jetPts.geometry.attributes.life.needsUpdate = true;
+      jetPts.geometry.attributes.maxLife.needsUpdate = true;
+    }
+  }
+
   renderer.render(scene, camera);
 }
 animate();
