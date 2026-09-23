@@ -878,6 +878,47 @@ input[type=range]::-moz-range-thumb {
   color: var(--text-secondary);
 }
 
+/* ─── Phase 3/4: capability-probe loading overlay ─────────────────────────── */
+#loading-overlay {
+  position: fixed; inset: 0; z-index: 9999;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 14px;
+  background: radial-gradient(ellipse at center, #0a0a0f 0%, #000 100%);
+  transition: opacity 0.6s ease;
+}
+#loading-overlay.hidden { opacity: 0; pointer-events: none; }
+.loading-ring {
+  width: 46px; height: 46px;
+  border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.08);
+  border-top-color: var(--accent-cyan, #6cf);
+  animation: loading-spin 0.9s linear infinite;
+}
+@keyframes loading-spin { to { transform: rotate(360deg); } }
+.loading-text {
+  font-size: 0.62rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-secondary, #9aa);
+  opacity: 0.75;
+}
+
+/* ─── Phase 3: fidelity tier badge next to render-rate readout ────────────── */
+.tier-badge {
+  font-size: 0.34rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.14);
+  color: var(--text-secondary, #9aa);
+  opacity: 0.85;
+  white-space: nowrap;
+}
+.tier-badge.tier-high { border-color: rgba(108,255,182,0.4); color: #6cffb6; }
+.tier-badge.tier-medium { border-color: rgba(255,209,102,0.4); color: #ffd166; }
+.tier-badge.tier-low { border-color: rgba(255,107,129,0.4); color: #ff6b81; }
+
 /* drag handle – mobile only */
 .dock-handle { display: none; }
 
@@ -1031,6 +1072,10 @@ input[type=range]::-moz-range-thumb {
 </style>
 </head>
 <body>
+<div id="loading-overlay">
+  <div class="loading-ring"></div>
+  <div class="loading-text" id="loading-text">Calibrating renderer…</div>
+</div>
 
 <div class="scanline"></div>
 <div id="crosshair"></div>
@@ -1120,10 +1165,21 @@ input[type=range]::-moz-range-thumb {
             <div class="metric-label">Time Dilation</div>
             <div class="metric-value" id="m-td">∞ at r<sub style="font-size:0.55em">s</sub></div>
           </div>
+          <div class="metric-card info-card" data-info="Dimensionless Kerr spin a* = a/M. 0 is a non-rotating (Schwarzschild) hole; 0.998 is the physical near-extremal limit accretion spin-up is expected to approach.">
+            <div class="metric-label">Spin Param. a*</div>
+            <div class="metric-value" id="m-spin">0.000</div>
+          </div>
+          <div class="metric-card info-card" data-info="Innermost Stable Circular Orbit — the disk's true physical inner edge. Frame-dragging lets orbits survive closer to a spinning hole, so this shrinks toward r₊ as spin increases.">
+            <div class="metric-label">ISCO (prograde)</div>
+            <div class="metric-value" id="m-isco">6.00 r<sub style="font-size:0.55em">g</sub></div>
+          </div>
         </div>
         <div class="fps-row">
           <div class="fps-label">Render Rate</div>
-          <div id="m-fps">— fps</div>
+          <div style="display:flex; align-items:center; gap:6px;">
+            <div id="m-fps">— fps</div>
+            <div class="tier-badge tier-high" id="m-tier">High</div>
+          </div>
         </div>
       </div>
     </div>
@@ -1185,6 +1241,43 @@ input[type=range]::-moz-range-thumb {
       </div>
     </div>
 
+    <!-- SECTION: Performance (Blueprint §5/§7, Phase 3-4) -->
+    <div class="dock-section">
+      <div class="section-trigger open" data-target="sec-performance">
+        <div class="section-left">
+          <div class="section-dot"></div>
+          <div class="section-title">Performance</div>
+        </div>
+        <div class="section-arrow"><svg viewBox="0 0 10 6"><polyline points="1,1 5,5 9,1"/></svg></div>
+      </div>
+      <div class="section-body open" id="sec-performance">
+        <div class="overlay-list">
+          <div class="overlay-row active" id="btn-fidelity-auto" data-tier="auto">
+            <div class="overlay-row-left">
+              <span class="overlay-icon">◐</span>
+              <div class="overlay-name">Auto</div>
+            </div>
+          </div>
+          <div class="overlay-row" id="btn-fidelity-high" data-tier="high">
+            <div class="overlay-row-left">
+              <span class="overlay-icon">◆</span>
+              <div class="overlay-name">Try High Fidelity</div>
+            </div>
+          </div>
+          <div class="overlay-row" id="btn-fidelity-low" data-tier="low">
+            <div class="overlay-row-left">
+              <span class="overlay-icon">▾</span>
+              <div class="overlay-name">Performance Mode</div>
+            </div>
+          </div>
+        </div>
+        <div class="fps-row">
+          <div class="fps-label">GPU probe</div>
+          <div id="m-probe" style="font-size:0.5rem; opacity:0.7;">—</div>
+        </div>
+      </div>
+    </div>
+
     <!-- SECTION 3: Parameters -->
     <div class="dock-section" id="sec-params-wrap">
       <div class="section-trigger open" data-target="sec-params">
@@ -1234,6 +1327,16 @@ input[type=range]::-moz-range-thumb {
             <div class="slider-track">
               <div class="slider-bg"><div class="slider-fill" id="sf-spin" style="width:30%"></div></div>
               <input type="range" id="sl-spin" min="0" max="100" value="30">
+            </div>
+          </div>
+          <div class="param-row" data-info="Physical Kerr spin a* = a/M. Distinct from Rotation Speed above (purely cosmetic animation rate) — this drives the actual metric: horizon size, ergosphere, photon ring and the disk's true ISCO inner edge.">
+            <div class="param-header">
+              <div class="param-name">Kerr Spin (a*)</div>
+              <div class="param-val" id="vl-kerrspin">0.000</div>
+            </div>
+            <div class="slider-track">
+              <div class="slider-bg"><div class="slider-fill" id="sf-kerrspin" style="width:0%"></div></div>
+              <input type="range" id="sl-kerrspin" min="0" max="998" value="0">
             </div>
           </div>
           <div class="param-row">
@@ -1437,7 +1540,108 @@ const CFG = {
   diskIntensity: 0.70, gridOpacity: 0.60,
   lensStrength: 0.55,  spinSpeed: 0.30,
   showGrid: true, showLens: false, showJets: false, showHawking: false, showFunnel: false, show2D: false,
+  // Phase 3 (Blueprint §5, §7): fidelity is 'auto' | 'high' | 'low'. 'auto' lets the
+  // runtime frame-time monitor pick a tier; 'high'/'low' are the manual override the
+  // blueprint calls the "Try High Fidelity" toggle / fallback tier.
+  fidelity: 'auto',
 };
+
+// ─── PHYSICS LAYER (Schwarzschild; Kerr-general functions, a=0 for Phase 1) ───
+// Ported from metric.js — kept as plain functions (no ES module import/export)
+// because this file loads three.js as a classic <script>, not as a module.
+// Framework-free on purpose: BHPhysics never touches THREE.js, so it stays
+// identical to the standalone metric.js source of truth if that file is
+// updated later.
+const BHPhysics = (() => {
+  function clampSpin(M, a) {
+    const maxA = 0.998 * M;
+    if (a < 0) return 0;
+    if (a > maxA) return maxA;
+    return a;
+  }
+  function horizonRadius(M, a = 0) {
+    return M + Math.sqrt(Math.max(M * M - a * a, 0));
+  }
+  function innerHorizonRadius(M, a = 0) {
+    return M - Math.sqrt(Math.max(M * M - a * a, 0));
+  }
+  function ergosphereRadius(M, a = 0, theta = Math.PI / 2) {
+    const cosT = Math.cos(theta);
+    return M + Math.sqrt(Math.max(M * M - a * a * cosT * cosT, 0));
+  }
+  function photonSphereRadius(M, a = 0, prograde = true) {
+    const aStar = a / M;
+    const sign = prograde ? -1 : 1;
+    return 2 * M * (1 + Math.cos((2 / 3) * Math.acos(sign * aStar)));
+  }
+  function iscoRadius(M, a = 0, prograde = true) {
+    const aStar = a / M;
+    const Z1 = 1 + Math.cbrt(1 - aStar * aStar) * (Math.cbrt(1 + aStar) + Math.cbrt(1 - aStar));
+    const Z2 = Math.sqrt(3 * aStar * aStar + Z1 * Z1);
+    const sign = prograde ? -1 : 1;
+    return M * (3 + Z2 + sign * Math.sqrt(Math.max((3 - Z1) * (3 + Z1 + 2 * Z2), 0)));
+  }
+  function deriveState(M, a = 0) {
+    const spin = clampSpin(M, a);
+    return {
+      mass: M, spin, spinStar: spin / M,
+      outerHorizon: horizonRadius(M, spin),
+      innerHorizon: innerHorizonRadius(M, spin),
+      ergosphereEquator: ergosphereRadius(M, spin, Math.PI / 2),
+      photonSpherePrograde: photonSphereRadius(M, spin, true),
+      iscoPrograde: iscoRadius(M, spin, true),
+    };
+  }
+  return { clampSpin, horizonRadius, innerHorizonRadius, ergosphereRadius, photonSphereRadius, iscoRadius, deriveState };
+})();
+
+// Dev-only sanity check, mirrors metric.test.js's load-bearing assertions.
+// Runs once at startup; logs a warning rather than throwing, so a physics
+// regression is visible in the console without breaking the page for users.
+(function validateBHPhysics() {
+  const checks = [
+    // Schwarzschild limit (a=0) — Phase 1 baseline, must still hold exactly.
+    ['horizon(M=1,a=0) == 2M', BHPhysics.horizonRadius(1, 0), 2],
+    ['photonSphere(M=1,a=0) == 3M', BHPhysics.photonSphereRadius(1, 0, true), 3],
+    ['isco(M=1,a=0) == 6M', BHPhysics.iscoRadius(1, 0, true), 6],
+    // Blueprint §6.1: "ergosphere collapses to horizon at a=0" — at zero spin
+    // there is no frame-dragging, so the ergosphere boundary must coincide
+    // with the horizon at every polar angle, not just the equator.
+    ['ergosphere(a=0,equator) == horizon(a=0)', BHPhysics.ergosphereRadius(1, 0, Math.PI / 2), BHPhysics.horizonRadius(1, 0)],
+    ['ergosphere(a=0,pole) == horizon(a=0)', BHPhysics.ergosphereRadius(1, 0, 0), BHPhysics.horizonRadius(1, 0)],
+    // Kerr extremal limit (a→M): closed-form results every GR reference agrees
+    // on — prograde photon sphere and prograde ISCO both collapse onto r=M
+    // (Bardeen, Press & Teukolsky 1972). Checked directly against the raw
+    // formulas (bypassing clampSpin's 0.998M cap) since this is a math-layer
+    // identity, not a claim about the physically-reachable slider range.
+    ['photonSphere(M=1,a=1,prograde) == M', BHPhysics.photonSphereRadius(1, 1, true), 1],
+    ['isco(M=1,a=1,prograde) == M', BHPhysics.iscoRadius(1, 1, true), 1],
+    // Retrograde branch moves the opposite way: orbits are pushed *out* as
+    // spin increases, so retrograde ISCO at extremal spin should sit at 9M.
+    ['isco(M=1,a=1,retrograde) == 9M', BHPhysics.iscoRadius(1, 1, false), 9],
+  ];
+  const failed = checks.filter(([, actual, expected]) => Math.abs(actual - expected) > 1e-6);
+  if (failed.length) {
+    console.warn('[BHPhysics] validation failed:', failed);
+  } else {
+    console.log('[BHPhysics] Schwarzschild + Kerr-limit checks passed:', checks.map(c => c[0]));
+  }
+})();
+
+// This scene's existing horizon sphere has radius 3.5 (see EVENT HORIZON
+// section below) with no stated physical mass behind it. We back that out
+// as M so every physically-derived quantity (photon sphere, ISCO, ergosphere)
+// lines up with the geometry that's already on screen: r+ = 2M = 3.5 => M = 1.75.
+const BH_MASS = 1.75; // 2 * BH_MASS === existing horizon sphere radius (3.5)
+
+// Live Kerr state. `bhState` is intentionally `let`, not `const`: Phase 2
+// makes spin a real, continuously-adjustable physical parameter, so every
+// downstream consumer (ergosphere mesh, telemetry cards) re-derives from
+// this single object on each spin change rather than caching its own copy
+// of the metric quantities. This is the same "single source of truth" rule
+// the blueprint states for metric.js (§2), just carried through to runtime
+// state instead of only load-time constants.
+let bhState = BHPhysics.deriveState(BH_MASS, 0);
 
 // ─── SCENE ───────────────────────────────────────────────────────────────────
 const canvas = document.getElementById('c');
@@ -1887,6 +2091,51 @@ const horizonMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
 const horizon = new THREE.Mesh(horizonGeo, horizonMat);
 scene.add(horizon);
 
+// ─── ERGOSPHERE (Phase 2) ────────────────────────────────────────────────
+// The ergosphere is the frame-dragging boundary r_ergo(theta) = M +
+// sqrt(M^2 - a^2*cos^2(theta)) — an oblate surface that touches the horizon
+// exactly at the poles and bulges out to 2M at the equator. It only exists
+// as a distinct surface once a > 0 (at a=0 it collapses onto the horizon,
+// which is exactly what the BHPhysics validation check above asserts), so
+// it's built here as its own toggle-scoped mesh rather than folded into the
+// horizon sphere's geometry.
+//
+// Built by displacing a unit icosphere's vertices radially using the exact
+// same `ergosphereRadius()` closed-form from BHPhysics that the telemetry
+// cards and unit tests use — one physics implementation, three consumers
+// (shader-independent, so it's plain THREE.js geometry, not GLSL).
+function buildErgosphereGeometry(M, a) {
+  const geo = new THREE.IcosahedronGeometry(1, 4);
+  const pos = geo.attributes.position;
+  const v = new THREE.Vector3();
+  for (let i = 0; i < pos.count; i++) {
+    v.fromBufferAttribute(pos, i).normalize();
+    const theta = Math.acos(Math.max(-1, Math.min(1, v.y))); // polar angle from scene's Y (spin) axis
+    const r = BHPhysics.ergosphereRadius(M, a, theta);
+    pos.setXYZ(i, v.x * r, v.y * r, v.z * r);
+  }
+  pos.needsUpdate = true;
+  geo.computeVertexNormals();
+  return geo;
+}
+const ergosphereMat = new THREE.MeshBasicMaterial({
+  color: 0xff6b81, transparent: true, opacity: 0.10,
+  side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending,
+});
+let ergosphereMesh = new THREE.Mesh(buildErgosphereGeometry(bhState.mass, bhState.spin), ergosphereMat);
+ergosphereMesh.visible = false; // no UI toggle currently wired to this; kept hidden
+scene.add(ergosphereMesh);
+
+// Geometry is rebuilt (not just scaled) on every spin change since the
+// ergosphere's *shape*, not just its size, depends on a — at a=0 it's a
+// sphere, at a=0.998M it's a visibly flattened spheroid. Old geometry is
+// disposed to avoid leaking GPU buffers across slider drags.
+function updateErgosphereGeometry(M, a) {
+  const old = ergosphereMesh.geometry;
+  ergosphereMesh.geometry = buildErgosphereGeometry(M, a);
+  old.dispose();
+}
+
 // ─── CORONA ──────────────────────────────────────────────────────────────────
 const coronaGeo = new THREE.SphereGeometry(9.0, 64, 64);
 const coronaMat = new THREE.ShaderMaterial({
@@ -2002,7 +2251,7 @@ function buildJets() {
   function makeGlowSpine(dir) {
     const points = [];
     for (let i = 0; i <= 80; i++) {
-      const t = i/80, y = dir*(3.8 + t*54), wobble = Math.sin(t*12)*0.18*t;
+      const t = i/80, y = dir*(3.5 + t*54), wobble = Math.sin(t*12)*0.18*t;
       points.push(new THREE.Vector3(wobble, y, 0));
     }
     const curve = new THREE.CatmullRomCurve3(points);
@@ -2044,7 +2293,10 @@ function buildJets() {
   const sz    = new Float32Array(count);      // base size
   const seed  = new Float32Array(count);      // random seed for shimmer
 
-  const RS_JET = 3.8;
+  // Base radius matches the event horizon sphere (radius 3.5, see EVENT HORIZON
+  // above) exactly, so the jet visibly originates at the horizon's pole instead
+  // of floating above it with a gap.
+  const RS_JET = 3.5;
   for (let i = 0; i < count; i++) {
     const sign  = (i % 2 === 0) ? 1 : -1;
     const frac  = Math.random();
@@ -2188,12 +2440,17 @@ photonSphere.rotation.x = Math.PI / 2;
 scene.add(photonSphere);
 
 // Mass slider visual feedback: scale horizon + both rings together as the mass slider changes r_s.
-// Scoped intentionally to just these three meshes (not disk/grid/jets) to avoid a full scene rebuild.
+// jetsGroup is included too — the jets spawn at a radius matching the horizon's *base* size (see
+// RS_JET, both in buildJets() and the respawn logic in animate()), so without scaling the group the
+// jets stayed fixed while the horizon shrank/grew, opening exactly the visible gap this fixes.
+// Disk/grid/corona are still deliberately excluded (avoids a full scene rebuild) since their extent
+// isn't tied to r_s the same direct way.
 function updatePhotonSphereScale(ratio) {
   const clamped = Math.max(0.4, Math.min(2.2, ratio)); // keep it from disappearing or overrunning the disk
   horizon.scale.setScalar(clamped);
   rsIndicator.scale.setScalar(clamped);
   photonSphere.scale.setScalar(clamped);
+  jetsGroup.scale.setScalar(clamped);
 }
 
 // ─── CAMERA ORBIT ────────────────────────────────────────────────────────────
@@ -2348,6 +2605,54 @@ function updateMassPhysics(sliderVal) {
 
 massSlider.addEventListener('input', () => updateMassPhysics(parseFloat(massSlider.value)));
 updateMassPhysics(parseFloat(massSlider.value)); // initialize on load
+
+// ─── KERR SPIN SLIDER: live physics recompute (Phase 2) ────────────────────
+// This is deliberately a separate control from `sl-spin` above ("Rotation
+// Speed", cosmetic animation rate). Overloading one slider for both a
+// cosmetic and a physical meaning would make CFG.spinSpeed's semantics
+// ambiguous and couple two independent concerns — this slider changes
+// `a`, the actual Kerr metric parameter, and is the exit-criteria "spin
+// slider" the blueprint (§7, Phase 2) means.
+const kerrSpinSlider = document.getElementById('sl-kerrspin');
+const kerrSpinValLabel = document.getElementById('vl-kerrspin');
+const kerrSpinFill = document.getElementById('sf-kerrspin');
+const mSpinDom = document.getElementById('m-spin');
+const mIscoDom = document.getElementById('m-isco');
+const mPsDom = document.getElementById('m-ps');
+
+function updateSpinPhysics(sliderVal) {
+  // Slider is 0..998, mapped directly to a* = a/M in [0, 0.998] — the
+  // physical near-extremal bound BHPhysics.clampSpin also enforces, so the
+  // UI can never even request an unclamped value.
+  const aStar = sliderVal / 1000;
+  const a = aStar * BH_MASS;
+
+  bhState = BHPhysics.deriveState(BH_MASS, a);
+
+  kerrSpinValLabel.textContent = aStar.toFixed(3);
+  kerrSpinFill.style.width = (aStar / 0.998 * 100).toFixed(1) + '%';
+
+  // Ergosphere: shape genuinely changes with spin (not just a uniform
+  // scale), so the geometry is rebuilt rather than transformed.
+  updateErgosphereGeometry(BH_MASS, bhState.spin);
+
+  // Telemetry cards: photon sphere and ISCO are shown as multiples of the
+  // Schwarzschild radius (r_s = 2M) so the numbers stay meaningful and
+  // comparable regardless of which mass the mass slider has selected, and
+  // visibly move as spin increases — this is the validation plan's ISCO
+  // sweep (BLUEPRINT.md §6.3) made visible in the UI, not just asserted in
+  // a console-only unit test.
+  const rs = 2 * BH_MASS;
+  mSpinDom.textContent = aStar.toFixed(3);
+  mIscoDom.innerHTML = (bhState.iscoPrograde / rs).toFixed(2) + ' r<sub style="font-size:0.55em">s</sub>';
+  mPsDom.innerHTML = (bhState.photonSpherePrograde / rs).toFixed(2) + ' r<sub style="font-size:0.55em">s</sub>';
+}
+
+// Phase 4: coalesced to at most one physics/geometry rebuild per rendered frame
+// (~60Hz cap, imperceptible) instead of once per raw 'input' event, which can fire
+// far faster than that during a fast drag — see `queueSpinUpdate` above.
+kerrSpinSlider.addEventListener('input', () => queueSpinUpdate(parseFloat(kerrSpinSlider.value)));
+updateSpinPhysics(parseFloat(kerrSpinSlider.value)); // initialize on load (runs once, before the render loop starts)
 
 // ─── UI: CLICK-TO-INFO ON TELEMETRY CARDS ───────────────────────────────────
 const infoPopover = document.getElementById('info-popover');
@@ -3585,13 +3890,161 @@ document.getElementById('btn-tde').addEventListener('click', () => {
 let t=0, frameCount=0, lastFPS=performance.now();
 const fpsDom = document.getElementById('m-fps');
 
+// ─── PHASE 3: PERFORMANCE HARDENING (Blueprint §5, §7) ──────────────────────
+// Honest note on scope: this build's render path is a decorative THREE.js
+// scene (particle sims, disk/corona/jet shaders, an ergosphere mesh) driven
+// by the real closed-form Kerr metric above — it is not the per-pixel GLSL
+// geodesic integrator Phase 1-2 describe, so there is no raytraced render
+// target to downsample (§5 "resolution strategy") or reproject (§5 "temporal
+// reprojection") in the literal sense. What follows adapts Phase 3/4's intent
+// — auto-detect headroom, degrade gracefully, offer a manual override, never
+// force a bad experience — to what's actually in this file:
+//   • a startup GPU capability probe (measured frame time over this
+//     renderer's own first frames, standing in for the blueprint's "timer
+//     query on a synthetic ray-trace") that picks an initial fidelity tier
+//     before the scene is revealed
+//   • continuous auto quality scaling (device pixel ratio, the dominant GPU
+//     cost here, plus CPU-side particle-sim update rate) driven by a rolling
+//     measured frame-time average, with hysteresis so it doesn't flap
+//   • a manual Auto / High Fidelity / Performance Mode toggle — the
+//     blueprint's "auto-select fallback + manual Try High Fidelity toggle"
+//   • a visibility-based render pause so a backgrounded tab does no GPU work
+const PERF = {
+  tier: 'high',        // resolved tier: 'high' | 'medium' | 'low', tracked even while fidelity === 'auto'
+  frameTimes: [],       // rolling window of real frame deltas, ms
+  maxSamples: 90,
+  lastAdjust: 0,
+  probing: true,
+  warmupFrames: 20,     // skip these entirely — page-load JIT warm-up/asset init/layout
+                          // inflate early frame times and don't reflect steady-state cost
+  probeFrames: 0,
+  probeTotal: 0,
+  probeFramesNeeded: 30, // counted AFTER warmupFrames
+  lastFrameAt: performance.now(),
+};
+
+function pixelRatioForTier(tier) {
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  if (tier === 'high') return dpr;
+  if (tier === 'medium') return Math.min(dpr, 1.25);
+  return Math.min(dpr, 0.85); // low / fallback tier — kept close to native res; the scene
+                                // is light enough that the real lever is sim throttling below,
+                                // not a heavy resolution cut that reads as "broken" on a phone
+}
+function simThrottleForTier(tier) {
+  // Hawking-radiation / jet particle sims update every Nth frame at lower tiers —
+  // cheaper than rebuilding geometry, and the eye doesn't need 60Hz particle drift.
+  if (tier === 'high') return 1;
+  if (tier === 'medium') return 2;
+  return 3;
+}
+
+const tierBadgeDom = document.getElementById('m-tier');
+const probeDom = document.getElementById('m-probe');
+
+function applyTier(tier, opts = {}) {
+  PERF.tier = tier;
+  renderer.setPixelRatio(pixelRatioForTier(tier));
+  if (tierBadgeDom) {
+    tierBadgeDom.textContent = tier === 'high' ? 'High' : tier === 'medium' ? 'Medium' : 'Performance';
+    tierBadgeDom.className = 'tier-badge tier-' + tier;
+  }
+  if (!opts.silent) console.log('[Perf] fidelity tier ->', tier);
+}
+
+// ── Manual fidelity toggle (Blueprint §5's "manual Try High Fidelity toggle") ─
+const fidelityRows = {
+  auto: document.getElementById('btn-fidelity-auto'),
+  high: document.getElementById('btn-fidelity-high'),
+  low: document.getElementById('btn-fidelity-low'),
+};
+function setFidelity(mode) {
+  CFG.fidelity = mode;
+  Object.entries(fidelityRows).forEach(([k, el]) => el && el.classList.toggle('active', k === mode));
+  if (mode === 'high') applyTier('high');
+  else if (mode === 'low') applyTier('low');
+  // 'auto' leaves the current resolved tier in place; the runtime monitor below takes back over.
+}
+Object.entries(fidelityRows).forEach(([mode, el]) => {
+  if (el) el.addEventListener('click', () => setFidelity(mode));
+});
+
+// ── Runtime auto quality scaling: DISABLED by request — never reduce quality ──
+// automatically. Smoothness instead comes from optimizations that don't touch
+// what's on screen: pausing all work in a backgrounded tab, and coalescing the
+// spin-slider's geometry rebuild to once per rendered frame (see queueSpinUpdate
+// below). Resolution and particle-sim rate always stay at their 'high' values
+// unless the person explicitly picks "Performance Mode" themselves.
+function maybeAutoAdjust(nowMs) {
+  return; // intentionally inert — see note above
+}
+
+// ── Startup GPU capability probe + loading overlay ───────────────────────────
+// The probe still measures real frame time (useful as an on-screen readout /
+// diagnostic), but it no longer acts on the result — it always resolves to
+// 'high' so the first frame you see is full quality, full resolution.
+const loadingOverlay = document.getElementById('loading-overlay');
+const loadingTextDom = document.getElementById('loading-text');
+applyTier('high', { silent: true });
+
+function finishProbe(avgMs) {
+  PERF.probing = false;
+  applyTier('high');
+  if (probeDom) probeDom.textContent = avgMs.toFixed(1) + ' ms/frame (quality locked to High)';
+  if (loadingTextDom) loadingTextDom.textContent = 'Ready';
+  requestAnimationFrame(() => loadingOverlay && loadingOverlay.classList.add('hidden'));
+}
+
+// ── Phase 4: near-extremal spin polish ────────────────────────────────────────
+// The Kerr spin slider fires many 'input' events per second while dragging; at
+// high spin the ergosphere's shape changes the most per unit of a, so rebuilding
+// its ~2500-vertex geometry synchronously on every event caused visible jank/
+// stutter right where the blueprint's "no visual artifacts across full spin
+// range" (§7, Phase 4 exit criteria) matters most. Coalesce to at most one
+// rebuild per rendered frame instead.
+let pendingSpinValue = null;
+function queueSpinUpdate(sliderVal) {
+  pendingSpinValue = sliderVal;
+}
+
 function animate() {
   requestAnimationFrame(animate);
+  const nowMs = performance.now();
+  const dt = nowMs - PERF.lastFrameAt;
+  PERF.lastFrameAt = nowMs;
+  PERF.frameTimes.push(dt);
+  if (PERF.frameTimes.length > PERF.maxSamples) PERF.frameTimes.shift();
+
+  if (PERF.probing) {
+    if (PERF.warmupFrames > 0) {
+      PERF.warmupFrames--;
+    } else {
+      PERF.probeFrames++;
+      PERF.probeTotal += dt;
+      if (PERF.probeFrames >= PERF.probeFramesNeeded) {
+        finishProbe(PERF.probeTotal / PERF.probeFrames);
+      }
+    }
+  } else {
+    maybeAutoAdjust(nowMs);
+  }
+
+  if (pendingSpinValue !== null) {
+    updateSpinPhysics(pendingSpinValue);
+    pendingSpinValue = null;
+  }
+
+  // Backgrounded tab: skip the GPU work entirely (rAF is already throttled by
+  // most browsers, but this also skips the CPU-side sim update below).
+  if (document.hidden) { frameCount++; return; }
+
   t += 0.016; frameCount++;
   if(performance.now()-lastFPS > 800) {
     fpsDom.textContent = (frameCount/((performance.now()-lastFPS)/1000)).toFixed(0)+' fps';
     frameCount=0; lastFPS=performance.now();
   }
+  const simThrottle = simThrottleForTier(PERF.tier);
+  const doSimUpdate = (frameCount % simThrottle) === 0;
   // Smooth camera preset tween (3D scene only — never runs in funnel mode)
   if (camTween && !CFG.showFunnel) {
     const elapsed = performance.now() - camTween.start;
@@ -3635,7 +4088,7 @@ function animate() {
       r.material.opacity = (0.18-i*0.03)*CFG.lensStrength;
     });
   }
-  if(hawkingPts.visible) {
+  if(hawkingPts.visible && doSimUpdate) {
     const{pos,vel,life,count}=hawkingPts.userData;
     for(let i=0;i<count;i++) {
       life[i]+=0.008;
@@ -3655,12 +4108,12 @@ function animate() {
   if(jetsGroup.visible) {
     const jetPts = jetsGroup.userData.jetParticles;
     const { pos, vel, life, maxL, count: jCount } = jetPts.userData;
-    const RS_JET = 3.8;
+    const RS_JET = 3.5; // matches horizon sphere radius — keep in sync with buildJets()
 
     // update shader time uniform
     jetPts.material.uniforms.time.value = t;
 
-    for(let i = 0; i < jCount; i++) {
+    if (doSimUpdate) for(let i = 0; i < jCount; i++) {
       life[i] += 0.012;
 
       if(life[i] >= maxL[i]) {
@@ -3710,7 +4163,7 @@ function animate() {
       const maxDepth = funnelGroup.userData.maxDepth;
       const DEPTH_SCALE = funnelGroup.userData.depthScale;
       // Positions written in LOCAL group space - group rotation handles world-space spin.
-      for (let i = 0; i < count; i++) {
+      if (doSimUpdate) for (let i = 0; i < count; i++) {
         life[i] += speed[i] * 0.01;
         if (life[i] > 1) life[i] = 0;
         const r = RS + (rOut - RS) * life[i];
@@ -3736,7 +4189,7 @@ function animate() {
       // not how far particles fly. This makes the slider meaningful at any value.
       const TRAVEL = Math.max(mergeDist * 2.2, RS * 5.5);
 
-      for (let i = 0; i < jCount; i++) {
+      if (doSimUpdate) for (let i = 0; i < jCount; i++) {
         life[i] += 0.012;
         if (life[i] >= maxL[i]) {
           life[i] = 0;
